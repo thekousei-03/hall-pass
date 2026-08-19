@@ -343,7 +343,7 @@ function ExamCard({ exam, starred, onToggleStar, onOpen }) {
   const deadlineStatus = getDeadlineStatus(exam);
   return (
     <div
-      className="cursor-pointer relative"
+      className="cursor-pointer relative hp-card"
       style={{
         background: C.surface,
         border: `1px solid ${C.line}`,
@@ -906,6 +906,59 @@ function ExamDetail({ exam, starred, onToggleStar, onBack }) {
 }
 
 /* ---------------------------------------------------------
+   HERO PASS — the app's own header, styled as the admit
+   card it's named after. This is the one signature moment;
+   everything else in the UI stays quiet around it.
+--------------------------------------------------------- */
+function HeroPass({ trackedCount }) {
+  const today = new Date();
+  const passNo = `HP-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+  return (
+    <div
+      style={{
+        position: "relative",
+        background: C.surface,
+        border: `1px solid ${C.line}`,
+        borderRadius: 10,
+        overflow: "hidden",
+        marginBottom: 22,
+        boxShadow: "0 3px 10px rgba(20,33,61,0.07)",
+      }}
+    >
+      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 7, background: C.ink }} />
+      <div className="flex items-start justify-between" style={{ padding: "16px 18px 12px", paddingLeft: 24, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <div className="flex items-center gap-2">
+            <Ticket size={22} color={C.ink} strokeWidth={1.75} />
+            <span style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 23, color: C.ink, letterSpacing: -0.4 }}>Hall Pass</span>
+          </div>
+          <div style={{ fontFamily: bodyFont, fontSize: 13, color: C.inkSoft, marginTop: 4, maxWidth: 380 }}>
+            Every competitive exam you're tracking — dates, pattern, notes, and past papers — in one place.
+          </div>
+        </div>
+        <div style={{ textAlign: "right", fontFamily: monoFont }}>
+          <div style={{ fontSize: 10, color: C.inkSoft, textTransform: "uppercase", letterSpacing: 0.6 }}>Pass no.</div>
+          <div style={{ fontSize: 13, color: C.ink, fontWeight: 700 }}>{passNo}</div>
+        </div>
+      </div>
+
+      <Perforation />
+
+      <div className="flex items-center justify-between" style={{ padding: "10px 18px", paddingLeft: 24, flexWrap: "wrap", gap: 8 }}>
+        <Barcode seed={passNo} color={C.inkSoft} />
+        <div style={{ fontFamily: monoFont, fontSize: 11.5, color: C.inkSoft, whiteSpace: "nowrap" }}>
+          {trackedCount > 0 ? (
+            <>TRACKING <span style={{ color: C.ink, fontWeight: 700 }}>{trackedCount}</span> {trackedCount === 1 ? "EXAM" : "EXAMS"}</>
+          ) : (
+            <>NOT TRACKING ANY EXAMS YET</>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
    APP
 --------------------------------------------------------- */
 export default function App() {
@@ -956,6 +1009,11 @@ export default function App() {
         .hp-tap { min-height: 34px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center; }
         .hp-eligibility-row { display: flex; gap: 8px; }
         .hp-eligibility-label { min-width: 84px; flex-shrink: 0; }
+        .hp-card { transition: transform .15s ease, box-shadow .15s ease; }
+        .hp-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(20,33,61,0.1); }
+        @media (prefers-reduced-motion: reduce) {
+          .hp-card, .hp-card:hover { transition: none; transform: none; }
+        }
         @media (max-width: 460px) {
           .hp-eligibility-row { flex-direction: column; gap: 1px; }
           .hp-eligibility-label { min-width: 0; }
@@ -964,13 +1022,7 @@ export default function App() {
       `}</style>
 
       <div style={{ maxWidth: 760, margin: "0 auto" }}>
-        <div className="flex items-center gap-2 mb-1">
-          <Ticket size={24} color={C.ink} strokeWidth={1.75} />
-          <span style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 24, color: C.ink, letterSpacing: -0.4 }}>Hall Pass</span>
-        </div>
-        <div style={{ fontFamily: bodyFont, fontSize: 13.5, color: C.inkSoft, marginBottom: 20 }}>
-          Every exam you're tracking — dates, pattern, notes, and past papers — in one place.
-        </div>
+        <HeroPass trackedCount={starred.size} />
 
         {view === "detail" && selectedExam ? (
           <ExamDetail exam={selectedExam} starred={starred.has(selectedExam.id)} onToggleStar={toggleStar} onBack={() => setView("home")} />
@@ -1023,7 +1075,7 @@ export default function App() {
             )}
 
             <div style={{ fontFamily: bodyFont, fontSize: 11.5, color: C.inkSoft, textAlign: "center", marginTop: 28 }}>
-              Demo dataset with placeholder dates — this is where real exam feeds would plug in.
+              Sample exams shown for demo purposes. Connect a live exam feed to replace them with real, verified dates.
             </div>
           </>
         )}
