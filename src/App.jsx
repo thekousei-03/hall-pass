@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
+
 import Auth from "./Auth";
-
-import {
-  onAuthStateChanged,
-  signOut,
-} from "firebase/auth";
-
 import { auth } from "./firebase";
+
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 import {
   Search,
@@ -21,6 +20,7 @@ import {
   ChevronDown,
   ShieldCheck,
   Download,
+  CalendarDays,
 } from "lucide-react";
 
 /* =========================================================
@@ -283,8 +283,10 @@ function getCountdownText(days) {
 /* =========================================================
    HERO
 ========================================================= */
-
 function HeroPass({ trackedCount }) {
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
   return (
     <div
       style={{
@@ -297,6 +299,7 @@ function HeroPass({ trackedCount }) {
         overflow: "hidden",
       }}
     >
+      {/* Decorative circle */}
       <div
         style={{
           position: "absolute",
@@ -309,11 +312,12 @@ function HeroPass({ trackedCount }) {
         }}
       />
 
+      {/* Top Section */}
       <div
         style={{
           display: "flex",
-          alignItems: "center",
           justifyContent: "space-between",
+          alignItems: "center",
           gap: 15,
           position: "relative",
           zIndex: 1,
@@ -349,11 +353,11 @@ function HeroPass({ trackedCount }) {
               maxWidth: 430,
             }}
           >
-            Your simple dashboard for tracking important
-            competitive exams.
+            Your simple dashboard for tracking important competitive exams.
           </div>
         </div>
 
+        {/* Tracked Counter */}
         <div
           style={{
             flexShrink: 0,
@@ -385,9 +389,76 @@ function HeroPass({ trackedCount }) {
           </div>
         </div>
       </div>
+
+      {/* Calendar Button */}
+      <button
+        onClick={() => setShowCalendar(!showCalendar)}
+        style={{
+          marginTop: 18,
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          padding: "11px",
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.15)",
+          background: "rgba(255,255,255,0.08)",
+          color: "#fff",
+          cursor: "pointer",
+          fontFamily: bodyFont,
+          fontWeight: 600,
+        }}
+      >
+        <CalendarDays size={18} />
+        {showCalendar ? "Hide Calendar" : "Open Calendar"}
+      </button>
+
+      {/* Calendar */}
+      {showCalendar && (
+        <div
+          style={{
+            marginTop: 15,
+            background: "#fff",
+            borderRadius: 12,
+            padding: 12,
+            color: "#111",
+          }}
+        >
+          <Calendar
+            value={selectedDate}
+            onChange={setSelectedDate}
+          />
+
+          <div
+            style={{
+              marginTop: 12,
+              textAlign: "center",
+              fontFamily: bodyFont,
+              fontWeight: 600,
+              color: C.ink,
+            }}
+          >
+            Selected Date
+          </div>
+
+          <div
+            style={{
+              textAlign: "center",
+              marginTop: 4,
+              fontFamily: monoFont,
+              color: C.green,
+              fontSize: 15,
+            }}
+          >
+            {selectedDate.toDateString()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 /* =========================================================
    EXAM CARD
