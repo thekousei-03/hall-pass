@@ -1151,6 +1151,7 @@ export default function App() {
 useEffect(() => {
   if (!user) {
     setNotes([]);
+    setNotesLoading(false);
     return;
   }
 
@@ -1162,20 +1163,32 @@ useEffect(() => {
 
       const notesQuery = query(
         notesRef,
-        where("userId", "==", user.uid),
-        orderBy("createdAt", "desc")
+        where("userId", "==", user.uid)
       );
 
       const snapshot = await getDocs(notesQuery);
 
-      const loadedNotes = snapshot.docs.map((noteDoc) => ({
-        id: noteDoc.id,
-        ...noteDoc.data(),
-      }));
+      const loadedNotes = snapshot.docs
+        .map((noteDoc) => ({
+          id: noteDoc.id,
+          ...noteDoc.data(),
+        }))
+        .sort((a, b) => {
+          const aTime = a.createdAt?.toMillis
+            ? a.createdAt.toMillis()
+            : 0;
+
+          const bTime = b.createdAt?.toMillis
+            ? b.createdAt.toMillis()
+            : 0;
+
+          return bTime - aTime;
+        });
 
       setNotes(loadedNotes);
     } catch (error) {
       console.error("Error loading notes:", error);
+      setNotes([]);
     } finally {
       setNotesLoading(false);
     }
