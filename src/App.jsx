@@ -1,11 +1,26 @@
 import React, { useState, useEffect, useCallback } from "react";
+
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
 import Auth from "./Auth";
-import { auth } from "./firebase";
 
 import { onAuthStateChanged, signOut } from "firebase/auth";
+
+import { auth, db } from "./firebase";
+
+import {
+  collection,
+  addDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+} from "firebase/firestore";
 
 import {
   Search,
@@ -1091,35 +1106,83 @@ export default function App() {
   const [starred, setStarred] = useState(new Set());
   const [starLoaded, setStarLoaded] = useState(false);
 
+//NOTES
+  const [notes, setNotes] = useState([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [noteSearch, setNoteSearch] = useState("");
+  const [showNotes, setShowNotes] = useState(false);
+
+  const [editingNote, setEditingNote] = useState(null);
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [noteTags, setNoteTags] = useState("");
+
   /* =======================================================
      FIREBASE AUTH STATE
   ======================================================= */
 
   useEffect(() => {
-    if (!auth) {
+  if (!auth) {
+    setAuthLoading(false);
+    return;
+  }
+
+  const unsubscribe = onAuthStateChanged(
+    auth,
+    (currentUser) => {
+      setUser(currentUser);
       setAuthLoading(false);
-      return;
+    },
+    (error) => {
+      console.error(
+        "Firebase auth state error:",
+        error
+      );
+
+      setUser(null);
+      setAuthLoading(false);
     }
+  );
 
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (currentUser) => {
-        setUser(currentUser);
-        setAuthLoading(false);
-      },
-      (error) => {
-        console.error(
-          "Firebase auth state error:",
-          error
-        );
+  return () => unsubscribe();
+}, []);
 
-        setUser(null);
-        setAuthLoading(false);
-      }
-    );
+// Load notes from Firestore
+useEffect(() => {
+  if (!user) {
+    setNotes([]);
+    return;
+  }
 
-    return () => unsubscribe();
-  }, []);
+  const loadNotes = async () => {
+    setNotesLoading(true);
+
+    try {
+      const notesRef = collection(db, "notes");
+
+      const notesQuery = query(
+        notesRef,
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
+
+      const snapshot = await getDocs(notesQuery);
+
+      const loadedNotes = snapshot.docs.map((noteDoc) => ({
+        id: noteDoc.id,
+        ...noteDoc.data(),
+      }));
+
+      setNotes(loadedNotes);
+    } catch (error) {
+      console.error("Error loading notes:", error);
+    } finally {
+      setNotesLoading(false);
+    }
+  };
+
+  loadNotes();
+}, [user]);
 
   /* =======================================================
      LOAD STARRED EXAMS
@@ -1162,6 +1225,111 @@ export default function App() {
       setStarLoaded(true);
     }
   }, [user]);
+
+
+  const saveNote = async () => {
+  if (!user) {
+    alert("Please log in first.");
+    return;
+  }
+
+  if (!noteTitle.trim() && !noteContent.trim()) {
+    alert("Please enter a title or note content.");
+    return;
+  }
+
+  try {
+    const tags = noteTags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+
+    if (editingNote) {
+      const noteRef = doc(db, "notes", editingNote);
+
+      await updateDoc(noteRef, {
+        title: noteTitle.trim(),
+        content: noteContent.trim(),
+        tags,
+        updatedAt: serverTimestamp(),
+      });
+
+      setNotes((prev) =>
+        prev.map((note) =>
+          note.id === editingNote
+            ? {
+                ...note,
+                title: noteTitle.trim(),
+                content: noteContent.trim(),
+                tags,
+              }
+            : note
+        )
+      );
+    } else {
+      const noteData = {
+        userId: user.uid,
+        title: noteTitle.trim(),
+        content: noteContent.trim(),
+        tags,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      const newNote = await addDoc(
+        collection(db, "notes"),
+        noteData
+      );
+
+      setNotes((prev) => [
+        {
+          id: newNote.id,
+          ...noteData,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        ...prev,
+      ]);
+    }
+
+    setNoteTitle("");
+    setNoteContent("");
+    setNoteTags("");
+    setEditingNote(null);
+  } catch (error) {
+    console.error("Error saving note:", error);
+    alert("Could not save the note. Please try again.");
+  }
+};
+
+const deleteNote = async (noteId) => {
+  if (!user) return;
+
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this note?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await deleteDoc(doc(db, "notes", noteId));
+
+    setNotes((prev) =>
+      prev.filter((note) => note.id !== noteId)
+    );
+
+    if (editingNote === noteId) {
+      setEditingNote(null);
+      setNoteTitle("");
+      setNoteContent("");
+      setNoteTags("");
+    }
+  } catch (error) {
+    console.error("Error deleting note:", error);
+    alert("Could not delete the note.");
+  }
+};
+
 
   /* =======================================================
      STAR / TRACK EXAM
@@ -1254,7 +1422,31 @@ export default function App() {
   const selectedExam = EXAMS.find(
     (exam) => exam.id === selectedId
   );
+const filteredNotes = notes.filter((note) => {
+  const search = noteSearch.trim().toLowerCase();
 
+  if (!search) return true;
+
+  return (
+    note.title?.toLowerCase().includes(search) ||
+    note.content?.toLowerCase().includes(search) ||
+    note.tags?.some((tag) =>
+      tag.toLowerCase().includes(search)
+    )
+  );
+});
+
+const startEditingNote = (note) => {
+  setEditingNote(note.id);
+  setNoteTitle(note.title || "");
+  setNoteContent(note.content || "");
+  setNoteTags(
+    Array.isArray(note.tags)
+      ? note.tags.join(", ")
+      : ""
+  );
+  setShowNotes(true);
+};
   /* =======================================================
      AUTH LOADING SCREEN
   ======================================================= */
@@ -1677,6 +1869,446 @@ export default function App() {
                 </button>
               ))}
             </div>
+
+
+            {/* =================================================
+    NOTES DASHBOARD
+================================================= */}
+
+<div
+  style={{
+    background: C.surface,
+    border: `1px solid ${C.line}`,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+  }}
+>
+  {/* Notes Header */}
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 14,
+    }}
+  >
+    <div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        <BookOpen size={20} color={C.ink} />
+
+        <h2
+          style={{
+            margin: 0,
+            fontFamily: displayFont,
+            fontSize: 20,
+            color: C.ink,
+          }}
+        >
+          My Notes
+        </h2>
+      </div>
+
+      <div
+        style={{
+          marginTop: 4,
+          fontFamily: bodyFont,
+          fontSize: 12,
+          color: C.inkSoft,
+        }}
+      >
+        Save and sync your exam notes with your account.
+      </div>
+    </div>
+
+    <button
+      onClick={() => {
+        setShowNotes(!showNotes);
+
+        if (showNotes) {
+          setEditingNote(null);
+          setNoteTitle("");
+          setNoteContent("");
+          setNoteTags("");
+        }
+      }}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        border: "none",
+        borderRadius: 8,
+        background: C.ink,
+        color: "#fff",
+        padding: "8px 12px",
+        cursor: "pointer",
+        fontFamily: bodyFont,
+        fontSize: 12,
+        fontWeight: 600,
+      }}
+    >
+      <FileText size={15} />
+      {showNotes ? "Close" : "Open Notes"}
+    </button>
+  </div>
+
+  {showNotes && (
+    <>
+      {/* Search Notes */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          background: C.bg,
+          border: `1px solid ${C.line}`,
+          borderRadius: 9,
+          padding: "8px 10px",
+          marginBottom: 14,
+        }}
+      >
+        <Search size={15} color={C.inkSoft} />
+
+        <input
+          value={noteSearch}
+          onChange={(e) =>
+            setNoteSearch(e.target.value)
+          }
+          placeholder="Search your notes..."
+          style={{
+            border: "none",
+            outline: "none",
+            background: "transparent",
+            width: "100%",
+            fontFamily: bodyFont,
+            fontSize: 13,
+            color: C.ink,
+          }}
+        />
+      </div>
+
+      {/* Create / Edit Note */}
+      <div
+        style={{
+          background: C.softBlue,
+          borderRadius: 10,
+          padding: 14,
+          marginBottom: 16,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: displayFont,
+            fontSize: 15,
+            fontWeight: 700,
+            color: C.ink,
+            marginBottom: 10,
+          }}
+        >
+          {editingNote ? "Edit Note" : "Create a Note"}
+        </div>
+
+        <input
+          value={noteTitle}
+          onChange={(e) =>
+            setNoteTitle(e.target.value)
+          }
+          placeholder="Note title"
+          style={{
+            width: "100%",
+            padding: "9px 10px",
+            border: `1px solid ${C.line}`,
+            borderRadius: 8,
+            marginBottom: 8,
+            background: "#fff",
+            color: C.ink,
+          }}
+        />
+
+        <textarea
+          value={noteContent}
+          onChange={(e) =>
+            setNoteContent(e.target.value)
+          }
+          placeholder="Write your notes here..."
+          rows={5}
+          style={{
+            width: "100%",
+            padding: "9px 10px",
+            border: `1px solid ${C.line}`,
+            borderRadius: 8,
+            resize: "vertical",
+            background: "#fff",
+            color: C.ink,
+            fontFamily: bodyFont,
+            marginBottom: 8,
+          }}
+        />
+
+        <input
+          value={noteTags}
+          onChange={(e) =>
+            setNoteTags(e.target.value)
+          }
+          placeholder="Tags: GATE, DSA, Maths"
+          style={{
+            width: "100%",
+            padding: "9px 10px",
+            border: `1px solid ${C.line}`,
+            borderRadius: 8,
+            marginBottom: 10,
+            background: "#fff",
+            color: C.ink,
+          }}
+        />
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+          }}
+        >
+          <button
+            onClick={saveNote}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              border: "none",
+              borderRadius: 8,
+              background: C.green,
+              color: "#fff",
+              padding: "8px 13px",
+              cursor: "pointer",
+              fontFamily: bodyFont,
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            <Save size={15} />
+
+            {editingNote ? "Update Note" : "Save Note"}
+          </button>
+
+          {editingNote && (
+            <button
+              onClick={() => {
+                setEditingNote(null);
+                setNoteTitle("");
+                setNoteContent("");
+                setNoteTags("");
+              }}
+              style={{
+                border: `1px solid ${C.line}`,
+                borderRadius: 8,
+                background: "#fff",
+                color: C.ink,
+                padding: "8px 13px",
+                cursor: "pointer",
+                fontFamily: bodyFont,
+                fontSize: 12,
+              }}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Notes List */}
+      <div
+        style={{
+          fontFamily: monoFont,
+          fontSize: 10,
+          color: C.inkSoft,
+          textTransform: "uppercase",
+          marginBottom: 8,
+        }}
+      >
+        {filteredNotes.length}{" "}
+        {filteredNotes.length === 1 ? "NOTE" : "NOTES"}
+      </div>
+
+      {notesLoading ? (
+        <div
+          style={{
+            textAlign: "center",
+            padding: 25,
+            color: C.inkSoft,
+            fontFamily: bodyFont,
+            fontSize: 13,
+          }}
+        >
+          Loading your notes...
+        </div>
+      ) : filteredNotes.length === 0 ? (
+        <div
+          style={{
+            textAlign: "center",
+            padding: 25,
+            border: `1px dashed ${C.line}`,
+            borderRadius: 10,
+            color: C.inkSoft,
+            fontFamily: bodyFont,
+            fontSize: 13,
+          }}
+        >
+          <BookOpen
+            size={28}
+            style={{
+              marginBottom: 8,
+              opacity: 0.5,
+            }}
+          />
+
+          <div
+            style={{
+              fontWeight: 600,
+              color: C.ink,
+              marginBottom: 4,
+            }}
+          >
+            No notes yet
+          </div>
+
+          <div>
+            Create your first exam note above.
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          {filteredNotes.map((note) => (
+            <div
+              key={note.id}
+              style={{
+                border: `1px solid ${C.line}`,
+                borderRadius: 10,
+                padding: 13,
+                background: "#fff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: 10,
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontFamily: displayFont,
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: C.ink,
+                    }}
+                  >
+                    {note.title || "Untitled Note"}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontFamily: bodyFont,
+                      fontSize: 13,
+                      lineHeight: 1.5,
+                      color: C.inkSoft,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {note.content}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 5,
+                    flexShrink: 0,
+                  }}
+                >
+                  <button
+                    onClick={() =>
+                      startEditingNote(note)
+                    }
+                    style={{
+                      border: `1px solid ${C.line}`,
+                      background: C.bg,
+                      borderRadius: 7,
+                      padding: "6px 8px",
+                      cursor: "pointer",
+                      color: C.ink,
+                    }}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      deleteNote(note.id)
+                    }
+                    style={{
+                      border: "none",
+                      background: C.softRed,
+                      borderRadius: 7,
+                      padding: "6px 8px",
+                      cursor: "pointer",
+                      color: C.red,
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              {/* Tags */}
+              {Array.isArray(note.tags) &&
+                note.tags.length > 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 5,
+                      marginTop: 10,
+                    }}
+                  >
+                    {note.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        style={{
+                          background: C.softYellow,
+                          color: C.ink,
+                          borderRadius: 20,
+                          padding: "4px 8px",
+                          fontFamily: monoFont,
+                          fontSize: 9,
+                        }}
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )}
+</div>
 
             {/* =============================================
                 RESULTS COUNT
