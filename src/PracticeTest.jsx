@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import {
   ListChecks, Plus, Trash2, Timer, CheckCircle2, XCircle, MinusCircle,
   Trophy, ChevronLeft, ChevronRight, X, BarChart3, Play,
+  Archive, ChevronDown, Search,
 } from "lucide-react";
 
 // firebase.js lives in the same folder as App.jsx and this file:
@@ -236,6 +237,125 @@ function QuestionBankManager({ examId, questions, loading, error, onOpenTest }) 
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
+   PYQ BROWSER — questions from the bank, grouped by the
+   `year` field already captured in QuestionBankManager.
+   Nothing new is stored here; this just gives that field a
+   place to be read back as a proper previous-year archive
+   instead of sitting unused on each question.
+========================================================= */
+function sortYearsDesc(years) {
+  return [...years].sort((a, b) => {
+    const na = parseInt(a, 10);
+    const nb = parseInt(b, 10);
+    const aIsNum = !Number.isNaN(na) && String(na) === a.trim();
+    const bIsNum = !Number.isNaN(nb) && String(nb) === b.trim();
+    if (aIsNum && bIsNum) return nb - na;
+    if (aIsNum !== bIsNum) return aIsNum ? -1 : 1; // numeric years first
+    return b.localeCompare(a);
+  });
+}
+
+function PYQPanel({ questions, loading }) {
+  const [openYear, setOpenYear] = useState(null);
+  const [search, setSearch] = useState("");
+
+  const dated = useMemo(() => questions.filter((q) => q.year && String(q.year).trim()), [questions]);
+  const undatedCount = questions.length - dated.length;
+
+  const years = useMemo(() => sortYearsDesc(Array.from(new Set(dated.map((q) => String(q.year).trim())))), [dated]);
+
+  useEffect(() => {
+    if (years.length > 0 && openYear === null) setOpenYear(years[0]);
+  }, [years, openYear]);
+
+  const term = search.trim().toLowerCase();
+  const filtered = term
+    ? dated.filter((q) => q.question.toLowerCase().includes(term) || (q.section || "").toLowerCase().includes(term))
+    : dated;
+
+  if (loading) return null;
+  if (dated.length === 0) return null; // nothing tagged with a year yet — nothing to browse
+
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, padding: 16, marginTop: 22 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Archive size={20} color={C.ink} />
+            <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 20, color: C.ink }}>Previous Year Questions</h2>
+          </div>
+          <div style={{ marginTop: 4, fontFamily: bodyFont, fontSize: 12, color: C.inkSoft }}>
+            {dated.length} question{dated.length === 1 ? "" : "s"} across {years.length} year{years.length === 1 ? "" : "s"}.
+            {undatedCount > 0 && ` ${undatedCount} more in the bank without a year tag.`}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.bg, border: `1px solid ${C.line}`, borderRadius: 9, padding: "8px 10px", marginBottom: 14 }}>
+        <Search size={15} color={C.inkSoft} />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search previous year questions…"
+          style={{ border: "none", outline: "none", background: "transparent", width: "100%", fontFamily: bodyFont, fontSize: 13, color: C.ink }}
+        />
+      </div>
+
+      {term && filtered.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "18px 0", fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft }}>
+          No saved questions match "{search}".
+        </div>
+      ) : (
+        <div style={{ display: "grid", gap: 8 }}>
+          {years.map((year) => {
+            const items = filtered.filter((q) => String(q.year).trim() === year);
+            if (items.length === 0) return null;
+            const isOpen = term ? true : openYear === year;
+            return (
+              <div key={year} style={{ border: `1px solid ${C.line}`, borderRadius: 9, overflow: "hidden" }}>
+                <button
+                  onClick={() => !term && setOpenYear(isOpen ? null : year)}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                    background: C.bg, border: "none", padding: "9px 12px", cursor: term ? "default" : "pointer",
+                  }}
+                >
+                  <span style={{ fontFamily: monoFont, fontSize: 12.5, fontWeight: 700, color: C.ink }}>
+                    {year} <span style={{ color: C.inkSoft, fontWeight: 400 }}>· {items.length} question{items.length === 1 ? "" : "s"}</span>
+                  </span>
+                  {!term && <ChevronDown size={15} color={C.inkSoft} style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }} />}
+                </button>
+                {isOpen && (
+                  <div style={{ padding: "0 12px 10px", display: "grid", gap: 8, marginTop: 8 }}>
+                    {items.map((q) => (
+                      <div key={q.id} style={{ border: `1px solid ${C.line}`, borderRadius: 8, padding: 10, background: "#fff" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                          <span style={{ fontFamily: monoFont, fontSize: 9.5, color: C.inkSoft, textTransform: "uppercase", background: C.bg, border: `1px solid ${C.line}`, borderRadius: 10, padding: "2px 7px" }}>
+                            {q.section || "General"}
+                          </span>
+                        </div>
+                        <div style={{ fontFamily: bodyFont, fontSize: 13, color: C.ink, fontWeight: 600, lineHeight: 1.5 }}>{q.question}</div>
+                        <div style={{ marginTop: 6, fontFamily: bodyFont, fontSize: 12, color: C.inkSoft }}>
+                          {q.options.map((o, i) => (
+                            <div key={i} style={{ color: i === q.correctIndex ? C.green : C.inkSoft, fontWeight: i === q.correctIndex ? 600 : 400 }}>
+                              {i === q.correctIndex ? "✓ " : "· "}{o}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -706,6 +826,7 @@ export default function PracticeTestSection({ exam, user }) {
         error={error}
         onOpenTest={() => setMode("test")}
       />
+      <PYQPanel questions={questions} loading={loading} />
       <TestHistoryPanel examId={exam.id} user={user} />
     </>
   );
