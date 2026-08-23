@@ -16,7 +16,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  query,
+  query as firestoreQuery,
   where,
   orderBy,
   serverTimestamp,
@@ -1164,48 +1164,57 @@ useEffect(() => {
   setNotesLoading(true);
   setNotesError(null);
 
-  const notesRef = collection(db, "notes");
-  const notesQuery = query(
-    notesRef,
-    where("userId", "==", user.uid)
-  );
+  let unsubscribe = () => {};
+  try {
+    const notesRef = collection(db, "notes");
+    const notesQuery = firestoreQuery(
+      notesRef,
+      where("userId", "==", user.uid)
+    );
 
-  const unsubscribe = onSnapshot(
-    notesQuery,
-    (snapshot) => {
-      const loadedNotes = snapshot.docs
-        .map((noteDoc) => ({
-          id: noteDoc.id,
-          ...noteDoc.data(),
-        }))
-        .sort((a, b) => {
-          const aTime = a.createdAt?.toMillis
-            ? a.createdAt.toMillis()
-            : 0;
+    unsubscribe = onSnapshot(
+      notesQuery,
+      (snapshot) => {
+        const loadedNotes = snapshot.docs
+          .map((noteDoc) => ({
+            id: noteDoc.id,
+            ...noteDoc.data(),
+          }))
+          .sort((a, b) => {
+            const aTime = a.createdAt?.toMillis
+              ? a.createdAt.toMillis()
+              : 0;
 
-          const bTime = b.createdAt?.toMillis
-            ? b.createdAt.toMillis()
-            : 0;
+            const bTime = b.createdAt?.toMillis
+              ? b.createdAt.toMillis()
+              : 0;
 
-          return bTime - aTime;
-        });
+            return bTime - aTime;
+          });
 
-      setNotes(loadedNotes);
-      setNotesLoading(false);
-      setNotesError(null);
-    },
-    (error) => {
-      // This fires on permission-denied, offline, etc. -- surfacing it
-      // is what turns a silent "notes vanished" into a diagnosable error.
-      console.error("Error loading notes:", error);
-      setNotesError(
-        error.code === "permission-denied"
-          ? "Can't load notes — check Firestore security rules for the 'notes' collection."
-          : "Can't load notes right now. Check your connection and try again."
-      );
-      setNotesLoading(false);
-    }
-  );
+        setNotes(loadedNotes);
+        setNotesLoading(false);
+        setNotesError(null);
+      },
+      (error) => {
+        // This fires on permission-denied, offline, etc. -- surfacing it
+        // is what turns a silent "notes vanished" into a diagnosable error.
+        console.error("Error loading notes:", error);
+        setNotesError(
+          error.code === "permission-denied"
+            ? "Can't load notes — check Firestore security rules for the 'notes' collection."
+            : "Can't load notes right now. Check your connection and try again."
+        );
+        setNotesLoading(false);
+      }
+    );
+  } catch (error) {
+    // Catches synchronous setup errors (e.g. a bad query call) so they
+    // can never crash the whole app the way "query is not a function" did.
+    console.error("Error setting up notes listener:", error);
+    setNotesError("Can't load notes right now. Please refresh the page.");
+    setNotesLoading(false);
+  }
 
   return () => unsubscribe();
 }, [user]);
