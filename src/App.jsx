@@ -20,6 +20,7 @@ import {
   where,
   orderBy,
   serverTimestamp,
+  onSnapshot,
 } from "firebase/firestore";
 
 import {
@@ -1109,6 +1110,7 @@ export default function App() {
 //NOTES
   const [notes, setNotes] = useState([]);
   const [notesLoading, setNotesLoading] = useState(false);
+  const [notesError, setNotesError] = useState(null);
   const [noteSearch, setNoteSearch] = useState("");
   const [showNotes, setShowNotes] = useState(false);
 
@@ -1147,27 +1149,30 @@ export default function App() {
   return () => unsubscribe();
 }, []);
 
-// Load notes from Firestore
+// Live-sync notes from Firestore (onSnapshot, not a one-time getDocs fetch).
+// This keeps notes in sync in real time -- across refreshes, tabs, and devices --
+// and surfaces read errors (e.g. permission-denied from security rules)
+// instead of silently showing an empty list.
 useEffect(() => {
   if (!user) {
     setNotes([]);
     setNotesLoading(false);
+    setNotesError(null);
     return;
   }
 
-  const loadNotes = async () => {
-    setNotesLoading(true);
+  setNotesLoading(true);
+  setNotesError(null);
 
-    try {
-      const notesRef = collection(db, "notes");
+  const notesRef = collection(db, "notes");
+  const notesQuery = query(
+    notesRef,
+    where("userId", "==", user.uid)
+  );
 
-      const notesQuery = query(
-        notesRef,
-        where("userId", "==", user.uid)
-      );
-
-      const snapshot = await getDocs(notesQuery);
-
+  const unsubscribe = onSnapshot(
+    notesQuery,
+    (snapshot) => {
       const loadedNotes = snapshot.docs
         .map((noteDoc) => ({
           id: noteDoc.id,
@@ -1186,15 +1191,23 @@ useEffect(() => {
         });
 
       setNotes(loadedNotes);
-    } catch (error) {
+      setNotesLoading(false);
+      setNotesError(null);
+    },
+    (error) => {
+      // This fires on permission-denied, offline, etc. -- surfacing it
+      // is what turns a silent "notes vanished" into a diagnosable error.
       console.error("Error loading notes:", error);
-      setNotes([]);
-    } finally {
+      setNotesError(
+        error.code === "permission-denied"
+          ? "Can't load notes — check Firestore security rules for the 'notes' collection."
+          : "Can't load notes right now. Check your connection and try again."
+      );
       setNotesLoading(false);
     }
-  };
+  );
 
-  loadNotes();
+  return () => unsubscribe();
 }, [user]);
 
   /* =======================================================
@@ -1267,18 +1280,8 @@ useEffect(() => {
         updatedAt: serverTimestamp(),
       });
 
-      setNotes((prev) =>
-        prev.map((note) =>
-          note.id === editingNote
-            ? {
-                ...note,
-                title: noteTitle.trim(),
-                content: noteContent.trim(),
-                tags,
-              }
-            : note
-        )
-      );
+      // No local setNotes needed here -- the onSnapshot listener
+      // above will pick up this write and update state automatically.
     } else {
       const noteData = {
         userId: user.uid,
@@ -1289,20 +1292,13 @@ useEffect(() => {
         updatedAt: serverTimestamp(),
       };
 
-      const newNote = await addDoc(
+      await addDoc(
         collection(db, "notes"),
         noteData
       );
 
-      setNotes((prev) => [
-        {
-          id: newNote.id,
-          ...noteData,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        ...prev,
-      ]);
+      // Same here -- onSnapshot will add the new note to state
+      // once Firestore confirms the write.
     }
 
     setNoteTitle("");
@@ -1327,9 +1323,7 @@ const deleteNote = async (noteId) => {
   try {
     await deleteDoc(doc(db, "notes", noteId));
 
-    setNotes((prev) =>
-      prev.filter((note) => note.id !== noteId)
-    );
+    // onSnapshot will remove it from state once the delete is confirmed.
 
     if (editingNote === noteId) {
       setEditingNote(null);
@@ -1974,6 +1968,24 @@ const startEditingNote = (note) => {
 
   {showNotes && (
     <>
+      {notesError && (
+        <div
+          style={{
+            background: C.softRed,
+            color: C.red,
+            border: `1px solid ${C.red}55`,
+            borderRadius: 9,
+            padding: "9px 11px",
+            marginBottom: 14,
+            fontFamily: bodyFont,
+            fontSize: 12.5,
+            lineHeight: 1.5,
+          }}
+        >
+          {notesError}
+        </div>
+      )}
+
       {/* Search Notes */}
       <div
         style={{
