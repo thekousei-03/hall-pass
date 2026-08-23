@@ -4,6 +4,7 @@ import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
 import Auth from "./Auth";
+import PracticeTestSection from "./PracticeTest";
 
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
@@ -673,6 +674,7 @@ function ExamDetail({
   starred,
   onToggleStar,
   onBack,
+  user,
 }) {
   const dl = daysLeft(exam.examDate);
 
@@ -1089,6 +1091,10 @@ function ExamDetail({
               </a>
             </div>
           </section>
+        </div>
+
+        <div style={{ padding: "0 20px 20px" }}>
+          <PracticeTestSection exam={exam} user={user} />
         </div>
       </div>
     </div>
@@ -1704,6 +1710,7 @@ const startEditingNote = (note) => {
             exam={selectedExam}
             starred={starred.has(selectedExam.id)}
             onToggleStar={toggleStar}
+            user={user}
             onBack={() => {
               setView("home");
               setSelectedId(null);
