@@ -9,17 +9,24 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 
 import { auth, db } from "./firebase";
 
-import {
+// Imported as a namespace (not destructured) to avoid a known Vite/Rollup
+// production-build issue where some Firebase modular SDK named exports
+// (e.g. onSnapshot) get dropped during tree-shaking despite working fine
+// in dev mode. Using the namespace object sidesteps that entirely.
+import * as firestore from "firebase/firestore";
+const {
   collection,
   addDoc,
   getDocs,
   updateDoc,
   deleteDoc,
   doc,
-  query as firestoreQuery,
   where,
+  orderBy,
   serverTimestamp,
-} from "firebase/firestore";
+  onSnapshot,
+} = firestore;
+const firestoreQuery = firestore.query;
 
 import {
   Search,
