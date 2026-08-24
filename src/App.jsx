@@ -544,41 +544,82 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
 
   return (
     <div>
-      <button onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "transparent", border: "none", padding: "5px 0", marginBottom: 14, color: C.inkSoft, cursor: "pointer", fontFamily: bodyFont, fontSize: 13 }}>
+      <button
+        onClick={onBack}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+          background: "transparent",
+          border: "none",
+          padding: "5px 0",
+          marginBottom: 14,
+          color: C.inkSoft,
+          cursor: "pointer",
+          fontFamily: bodyFont,
+          fontSize: 13,
+        }}
+      >
         <ChevronLeft size={17} /> Back to exams
       </button>
 
       <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, overflow: "hidden" }}>
+        {/* Header */}
         <div style={{ padding: 20, background: C.ink, color: "#fff" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 15 }}>
             <div>
-              <div style={{ fontFamily: monoFont, fontSize: 10, textTransform: "uppercase", opacity: 0.65, marginBottom: 6 }}>{exam.category}</div>
-              <h1 style={{ fontFamily: displayFont, fontSize: 30, margin: 0, lineHeight: 1.1 }}>{exam.shortName}</h1>
-              <div style={{ fontFamily: bodyFont, fontSize: 13, opacity: 0.75, marginTop: 6 }}>{exam.name}</div>
+              <div style={{ fontFamily: monoFont, fontSize: 10, textTransform: "uppercase", opacity: 0.65, marginBottom: 6 }}>
+                {exam.category}
+              </div>
+              <h1 style={{ fontFamily: displayFont, fontSize: 30, margin: 0, lineHeight: 1.1 }}>
+                {exam.shortName}
+              </h1>
+              <div style={{ fontFamily: bodyFont, fontSize: 13, opacity: 0.75, marginTop: 6 }}>
+                {exam.name}
+              </div>
             </div>
-            <button onClick={() => onToggleStar(exam.id)} style={{ border: "none", background: "rgba(255,255,255,0.1)", color: starred ? "#f4c64e" : "#fff", borderRadius: 9, padding: 9, cursor: "pointer" }}>
+            <button
+              onClick={() => onToggleStar(exam.id)}
+              style={{
+                border: "none",
+                background: "rgba(255,255,255,0.1)",
+                color: starred ? "#f4c64e" : "#fff",
+                borderRadius: 9,
+                padding: 9,
+                cursor: "pointer",
+              }}
+            >
               <Star size={22} fill={starred ? "#f4c64e" : "none"} />
             </button>
           </div>
         </div>
 
         <div style={{ padding: 20 }}>
+          {/* Date + Countdown */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 20 }}>
             <div style={{ background: C.softBlue, borderRadius: 10, padding: 12 }}>
               <div style={{ fontFamily: monoFont, fontSize: 9, color: C.inkSoft, textTransform: "uppercase" }}>Exam date</div>
-              <div style={{ fontFamily: bodyFont, fontSize: 14, fontWeight: 600, color: C.ink, marginTop: 4 }}>{formatDate(exam.examDate)}</div>
+              <div style={{ fontFamily: bodyFont, fontSize: 14, fontWeight: 600, color: C.ink, marginTop: 4 }}>
+                {formatDate(exam.examDate)}
+              </div>
             </div>
             <div style={{ background: dl <= 14 ? C.softRed : C.softGreen, borderRadius: 10, padding: 12 }}>
               <div style={{ fontFamily: monoFont, fontSize: 9, color: C.inkSoft, textTransform: "uppercase" }}>Countdown</div>
-              <div style={{ fontFamily: monoFont, fontSize: 14, fontWeight: 700, color: dl <= 14 ? C.red : C.green, marginTop: 4 }}>{getCountdownText(dl)}</div>
+              <div style={{ fontFamily: monoFont, fontSize: 14, fontWeight: 700, color: dl <= 14 ? C.red : C.green, marginTop: 4 }}>
+                {getCountdownText(dl)}
+              </div>
             </div>
           </div>
 
+          {/* About */}
           <section style={{ marginBottom: 22 }}>
             <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 8px", color: C.ink }}>About the exam</h2>
-            <p style={{ fontFamily: bodyFont, fontSize: 13.5, lineHeight: 1.6, color: C.inkSoft, margin: 0 }}>{exam.description}</p>
+            <p style={{ fontFamily: bodyFont, fontSize: 13.5, lineHeight: 1.6, color: C.inkSoft, margin: 0 }}>
+              {exam.description}
+            </p>
           </section>
 
+          {/* Eligibility */}
           <section style={{ marginBottom: 22 }}>
             <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 10px", color: C.ink }}>Eligibility</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -597,20 +638,25 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
             </div>
           </section>
 
+          {/* Selection process */}
           <section style={{ marginBottom: 22 }}>
             <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 10px", color: C.ink }}>Selection process</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {exam.stages.map((stage, i) => (
                 <div key={stage} style={{ display: "flex", alignItems: "center", gap: 9, fontFamily: bodyFont, fontSize: 13, color: C.inkSoft }}>
-                  <span style={{ width: 23, height: 23, borderRadius: "50%", background: C.ink, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: monoFont, fontSize: 10 }}>{i + 1}</span>
+                  <span style={{ width: 23, height: 23, borderRadius: "50%", background: C.ink, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: monoFont, fontSize: 10 }}>
+                    {i + 1}
+                  </span>
                   {stage}
                 </div>
               ))}
             </div>
           </section>
 
+          {/* Syllabus */}
           <SyllabusPanel exam={exam} user={user} />
 
+          {/* Official links */}
           <section style={{ borderTop: `1px solid ${C.line}`, paddingTop: 18 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
               <a href={exam.officialWebsite} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.ink, color: "#fff", textDecoration: "none", borderRadius: 8, padding: "9px 12px", fontFamily: bodyFont, fontSize: 12.5, fontWeight: 600 }}>
@@ -623,7 +669,7 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
           </section>
         </div>
 
-        {/* ========== MOCK TEST + CLOUD FILES ========== */}
+        {/* ========== THIS IS THE IMPORTANT PART ========== */}
         <div style={{ padding: "0 20px 20px" }}>
           <PracticeTestSection exam={exam} />
           <CloudFiles user={user} examId={exam.id} />
