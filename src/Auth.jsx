@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { auth } from "./firebase";
 import { Ticket, Mail, Lock, ArrowRight, User } from "lucide-react";
@@ -11,7 +13,6 @@ import { Ticket, Mail, Lock, ArrowRight, User } from "lucide-react";
 ========================================================= */
 const displayFont = "'Space Grotesk', sans-serif";
 const bodyFont = "'IBM Plex Sans', sans-serif";
-const monoFont = "'IBM Plex Mono', monospace";
 
 const C = {
   bg: "#f4f1ea",
@@ -23,7 +24,6 @@ const C = {
   green: "#3c7a57",
   softRed: "#f8e4e1",
   softGreen: "#e5f1e9",
-  softBlue: "#e8eef8",
 };
 
 const OMR_BG = `radial-gradient(circle, rgba(20,33,61,0.055) 1px, transparent 1px)`;
@@ -34,6 +34,7 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -57,20 +58,46 @@ export default function Auth() {
       }
     } catch (err) {
       console.error(err);
-      // Friendly error messages
       if (err.code === "auth/email-already-in-use") {
         setError("This email is already registered. Try logging in.");
       } else if (err.code === "auth/invalid-email") {
         setError("Please enter a valid email address.");
       } else if (err.code === "auth/weak-password") {
         setError("Password should be at least 6 characters.");
-      } else if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+      } else if (
+        err.code === "auth/user-not-found" ||
+        err.code === "auth/wrong-password" ||
+        err.code === "auth/invalid-credential"
+      ) {
         setError("Incorrect email or password.");
       } else {
         setError("Something went wrong. Please try again.");
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setSuccess("");
+    setGoogleLoading(true);
+
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged in App.jsx will handle the rest
+    } catch (err) {
+      console.error(err);
+      if (err.code === "auth/popup-closed-by-user") {
+        // User closed the popup — no need to show error
+      } else if (err.code === "auth/cancelled-popup-request") {
+        // Ignore
+      } else {
+        setError("Google sign-in failed. Please try again.");
+      }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -88,7 +115,7 @@ export default function Auth() {
       }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
         
         * { box-sizing: border-box; }
         input:focus {
@@ -97,12 +124,7 @@ export default function Auth() {
         }
       `}</style>
 
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 420,
-        }}
-      >
+      <div style={{ width: "100%", maxWidth: 420 }}>
         {/* Logo / Branding */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div
@@ -181,7 +203,6 @@ export default function Auth() {
                 fontWeight: 600,
                 fontSize: 14,
                 cursor: "pointer",
-                transition: "all 0.15s",
               }}
             >
               Log in
@@ -203,7 +224,6 @@ export default function Auth() {
                 fontWeight: 600,
                 fontSize: 14,
                 cursor: "pointer",
-                transition: "all 0.15s",
               }}
             >
               Sign up
@@ -344,7 +364,7 @@ export default function Auth() {
               </div>
             </div>
 
-            {/* Error / Success messages */}
+            {/* Error / Success */}
             {error && (
               <div
                 style={{
@@ -381,7 +401,7 @@ export default function Auth() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || googleLoading}
               style={{
                 width: "100%",
                 padding: "13px",
@@ -398,7 +418,6 @@ export default function Auth() {
                 justifyContent: "center",
                 gap: 8,
                 opacity: loading ? 0.7 : 1,
-                transition: "opacity 0.15s",
               }}
             >
               {loading ? (
@@ -411,9 +430,67 @@ export default function Auth() {
               )}
             </button>
           </form>
+
+          {/* Divider */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              margin: "22px 0",
+            }}
+          >
+            <div style={{ flex: 1, height: 1, background: C.line }} />
+            <span style={{ fontSize: 12.5, color: C.inkSoft }}>or continue with</span>
+            <div style={{ flex: 1, height: 1, background: C.line }} />
+          </div>
+
+          {/* Google Sign-in Button */}
+          <button
+            onClick={handleGoogleSignIn}
+            disabled={loading || googleLoading}
+            style={{
+              width: "100%",
+              padding: "12px",
+              border: `1px solid ${C.line}`,
+              borderRadius: 10,
+              background: "#fff",
+              color: C.ink,
+              fontFamily: bodyFont,
+              fontSize: 14.5,
+              fontWeight: 600,
+              cursor: googleLoading ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              opacity: googleLoading ? 0.7 : 1,
+            }}
+          >
+            {/* Google Logo */}
+            <svg width="18" height="18" viewBox="0 0 18 18">
+              <path
+                fill="#4285F4"
+                d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
+              />
+              <path
+                fill="#34A853"
+                d="M9 18c2.43 0 4.467-.806 5.96-2.18l-2.908-2.259c-.806.54-1.837.86-3.052.86-2.347 0-4.332-1.585-5.042-3.715H.957v2.332A8.997 8.997 0 0 0 9 18z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M3.958 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.276-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.001-2.332z"
+              />
+              <path
+                fill="#EA4335"
+                d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.958 7.294C4.668 5.163 6.653 3.58 9 3.58z"
+              />
+            </svg>
+            {googleLoading ? "Signing in..." : "Continue with Google"}
+          </button>
         </div>
 
-        {/* Footer text */}
+        {/* Footer */}
         <p
           style={{
             textAlign: "center",
