@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
+import ReactMarkdown from "react-markdown";
+import { jsPDF } from "jspdf";
 
 import Auth from "./Auth";
 import PracticeTestSection from "./PracticeTest";
@@ -9,10 +11,7 @@ import CloudFiles from "./CloudFiles";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "./firebase";
 
-// Imported as a namespace (not destructured) to avoid a known Vite/Rollup
-// production-build issue where some Firebase modular SDK named exports
-// (e.g. onSnapshot) get dropped during tree-shaking despite working fine
-// in dev mode. Using the namespace object sidesteps that entirely.
+// Imported as a namespace to avoid Vite/Rollup tree-shaking issues
 import * as firestore from "firebase/firestore";
 const {
   collection,
@@ -23,6 +22,7 @@ const {
   where,
   serverTimestamp,
   onSnapshot,
+  getDocs,
 } = firestore;
 const firestoreQuery = firestore.query;
 
@@ -38,6 +38,9 @@ import {
   ChevronDown,
   CalendarDays,
   List,
+  Pin,
+  Download,
+  FileDown,
 } from "lucide-react";
 
 /* =========================================================
@@ -67,7 +70,6 @@ const OMR_BG = `radial-gradient(circle, rgba(20,33,61,0.055) 1px, transparent 1p
 
 /* =========================================================
    EXAM DATA
-   Replace / expand this list with your actual exam data.
 ========================================================= */
 const EXAMS = [
   {
@@ -79,11 +81,7 @@ const EXAMS = [
     applicationStart: "2027-02-10",
     applicationEnd: "2027-02-28",
     description: "India's premier civil services examination conducted by the Union Public Service Commission.",
-    eligibility: {
-      education: "Graduate degree",
-      age: "21–32 years",
-      attempts: "Varies by category",
-    },
+    eligibility: { education: "Graduate degree", age: "21–32 years", attempts: "Varies by category" },
     stages: ["Preliminary Examination", "Main Examination", "Personality Test"],
     syllabus: [
       {
@@ -117,10 +115,7 @@ const EXAMS = [
       {
         stage: "Mains",
         papers: [
-          {
-            name: "Essay",
-            topics: ["Two essays (~1000 words each) from philosophical, governance, society, technology & current-event themes"],
-          },
+          { name: "Essay", topics: ["Two essays (~1000 words each) from philosophical, governance, society, technology & current-event themes"] },
           {
             name: "GS-I — Heritage, History, Geography, Society",
             topics: [
@@ -168,10 +163,7 @@ const EXAMS = [
               "Case studies on above issues",
             ],
           },
-          {
-            name: "Optional Subject (2 papers)",
-            topics: ["One optional subject chosen from the official list of ~48 subjects (literature & non-literature)"],
-          },
+          { name: "Optional Subject (2 papers)", topics: ["One optional subject chosen from the official list of ~48 subjects (literature & non-literature)"] },
         ],
       },
     ],
@@ -187,82 +179,26 @@ const EXAMS = [
     applicationStart: "2027-03-15",
     applicationEnd: "2027-04-10",
     description: "A major recruitment examination for Group B and Group C posts in the Government of India.",
-    eligibility: {
-      education: "Graduate degree",
-      age: "18–32 years depending on post",
-      attempts: "No fixed attempt limit",
-    },
+    eligibility: { education: "Graduate degree", age: "18–32 years depending on post", attempts: "No fixed attempt limit" },
     stages: ["Tier-I", "Tier-II", "Document Verification"],
     syllabus: [
       {
         stage: "Tier I",
         papers: [
-          {
-            name: "General Intelligence & Reasoning",
-            topics: [
-              "Analogy, Classification, Series (number/figural)",
-              "Coding-Decoding, Blood Relations, Direction Sense",
-              "Venn Diagrams, Syllogism, Statement–Conclusion",
-              "Paper folding/cutting, Embedded figures, Matrix",
-              "Order & Ranking, Puzzles",
-            ],
-          },
-          {
-            name: "General Awareness",
-            topics: [
-              "Current events (national & international)",
-              "Indian History, Geography, Polity & Constitution",
-              "Economy, Budget, Government schemes",
-              "General Science & Everyday Science",
-              "Environment, Ecology, Sports, Awards, Books",
-            ],
-          },
-          {
-            name: "Quantitative Aptitude",
-            topics: [
-              "Number System, Simplification, LCM/HCF",
-              "Percentage, Ratio & Proportion, Average",
-              "Profit & Loss, Discount, SI & CI",
-              "Time & Work, Time-Speed-Distance, Mixture",
-              "Algebra, Geometry, Mensuration, Trigonometry",
-              "Data Interpretation (tables, graphs)",
-            ],
-          },
-          {
-            name: "English Comprehension",
-            topics: [
-              "Reading Comprehension, Cloze Test",
-              "Error Spotting, Sentence Improvement",
-              "Synonyms, Antonyms, Idioms & Phrases",
-              "One-word substitution, Fill in the blanks",
-              "Para Jumbles, Active/Passive, Direct/Indirect",
-            ],
-          },
+          { name: "General Intelligence & Reasoning", topics: ["Analogy, Classification, Series (number/figural)", "Coding-Decoding, Blood Relations, Direction Sense", "Venn Diagrams, Syllogism, Statement–Conclusion", "Paper folding/cutting, Embedded figures, Matrix", "Order & Ranking, Puzzles"] },
+          { name: "General Awareness", topics: ["Current events (national & international)", "Indian History, Geography, Polity & Constitution", "Economy, Budget, Government schemes", "General Science & Everyday Science", "Environment, Ecology, Sports, Awards, Books"] },
+          { name: "Quantitative Aptitude", topics: ["Number System, Simplification, LCM/HCF", "Percentage, Ratio & Proportion, Average", "Profit & Loss, Discount, SI & CI", "Time & Work, Time-Speed-Distance, Mixture", "Algebra, Geometry, Mensuration, Trigonometry", "Data Interpretation (tables, graphs)"] },
+          { name: "English Comprehension", topics: ["Reading Comprehension, Cloze Test", "Error Spotting, Sentence Improvement", "Synonyms, Antonyms, Idioms & Phrases", "One-word substitution, Fill in the blanks", "Para Jumbles, Active/Passive, Direct/Indirect"] },
         ],
       },
       {
         stage: "Tier II (Paper I — compulsory)",
         papers: [
-          {
-            name: "Mathematical Abilities",
-            topics: ["Advanced Arithmetic, Algebra, Geometry, Mensuration", "Trigonometry, Statistics, Probability, Data Interpretation"],
-          },
-          {
-            name: "Reasoning & General Intelligence",
-            topics: ["Higher-order puzzles, seating arrangements, critical thinking, emotional & social intelligence"],
-          },
-          {
-            name: "English Language & Comprehension",
-            topics: ["Longer RC passages, para-jumbles, advanced grammar, complex cloze tests"],
-          },
-          {
-            name: "General Awareness",
-            topics: ["Static GK + recent current affairs (deeper than Tier I)"],
-          },
-          {
-            name: "Computer Knowledge + DEST",
-            topics: ["Computer basics, OS, MS Office, Internet, Networking; Data Entry Speed Test (qualifying)"],
-          },
+          { name: "Mathematical Abilities", topics: ["Advanced Arithmetic, Algebra, Geometry, Mensuration", "Trigonometry, Statistics, Probability, Data Interpretation"] },
+          { name: "Reasoning & General Intelligence", topics: ["Higher-order puzzles, seating arrangements, critical thinking, emotional & social intelligence"] },
+          { name: "English Language & Comprehension", topics: ["Longer RC passages, para-jumbles, advanced grammar, complex cloze tests"] },
+          { name: "General Awareness", topics: ["Static GK + recent current affairs (deeper than Tier I)"] },
+          { name: "Computer Knowledge + DEST", topics: ["Computer basics, OS, MS Office, Internet, Networking; Data Entry Speed Test (qualifying)"] },
         ],
       },
     ],
@@ -278,48 +214,15 @@ const EXAMS = [
     applicationStart: "2026-10-01",
     applicationEnd: "2026-11-15",
     description: "A national-level entrance examination for undergraduate engineering and related programs.",
-    eligibility: {
-      education: "Class 12 or equivalent",
-      age: "No specific age limit",
-      attempts: "As specified by NTA",
-    },
+    eligibility: { education: "Class 12 or equivalent", age: "No specific age limit", attempts: "As specified by NTA" },
     stages: ["Computer Based Test", "Result", "Counselling"],
     syllabus: [
       {
         stage: "Paper 1 (B.E./B.Tech)",
         papers: [
-          {
-            name: "Physics",
-            topics: [
-              "Units & Measurements, Kinematics, Laws of Motion",
-              "Work, Energy & Power, Rotational Motion, Gravitation",
-              "Properties of Solids & Liquids, Thermodynamics, Kinetic Theory",
-              "Oscillations & Waves",
-              "Electrostatics, Current Electricity, Magnetic Effects",
-              "EMI & AC, Electromagnetic Waves, Optics",
-              "Dual Nature of Matter, Atoms & Nuclei, Electronic Devices",
-              "Experimental Skills",
-            ],
-          },
-          {
-            name: "Chemistry",
-            topics: [
-              "Physical: Basic Concepts, Atomic Structure, Chemical Bonding, Thermodynamics, Equilibrium, Redox & Electrochemistry, Chemical Kinetics, Solutions, Surface Chemistry",
-              "Inorganic: Periodic Table, s/p/d/f-Block, Coordination Compounds, Isolation of Metals",
-              "Organic: Basic Principles, Hydrocarbons, Haloalkanes/Haloarenes, Alcohols/Phenols/Ethers, Aldehydes/Ketones/Carboxylic Acids, Amines, Biomolecules, Polymers",
-            ],
-          },
-          {
-            name: "Mathematics",
-            topics: [
-              "Sets, Relations & Functions; Complex Numbers & Quadratic Equations",
-              "Matrices & Determinants; Permutations & Combinations; Binomial Theorem",
-              "Sequences & Series; Limits, Continuity & Differentiability",
-              "Integral Calculus; Differential Equations",
-              "Coordinate Geometry (2D); Three-Dimensional Geometry; Vector Algebra",
-              "Statistics & Probability; Trigonometry",
-            ],
-          },
+          { name: "Physics", topics: ["Units & Measurements, Kinematics, Laws of Motion", "Work, Energy & Power, Rotational Motion, Gravitation", "Properties of Solids & Liquids, Thermodynamics, Kinetic Theory", "Oscillations & Waves", "Electrostatics, Current Electricity, Magnetic Effects", "EMI & AC, Electromagnetic Waves, Optics", "Dual Nature of Matter, Atoms & Nuclei, Electronic Devices", "Experimental Skills"] },
+          { name: "Chemistry", topics: ["Physical: Basic Concepts, Atomic Structure, Chemical Bonding, Thermodynamics, Equilibrium, Redox & Electrochemistry, Chemical Kinetics, Solutions, Surface Chemistry", "Inorganic: Periodic Table, s/p/d/f-Block, Coordination Compounds, Isolation of Metals", "Organic: Basic Principles, Hydrocarbons, Haloalkanes/Haloarenes, Alcohols/Phenols/Ethers, Aldehydes/Ketones/Carboxylic Acids, Amines, Biomolecules, Polymers"] },
+          { name: "Mathematics", topics: ["Sets, Relations & Functions; Complex Numbers & Quadratic Equations", "Matrices & Determinants; Permutations & Combinations; Binomial Theorem", "Sequences & Series; Limits, Continuity & Differentiability", "Integral Calculus; Differential Equations", "Coordinate Geometry (2D); Three-Dimensional Geometry; Vector Algebra", "Statistics & Probability; Trigonometry"] },
         ],
       },
     ],
@@ -335,31 +238,14 @@ const EXAMS = [
     applicationStart: "2026-08-25",
     applicationEnd: "2026-10-01",
     description: "A national examination used for postgraduate admissions and recruitment opportunities in engineering and science.",
-    eligibility: {
-      education: "Undergraduate degree or currently pursuing eligible degree",
-      age: "No age limit",
-      attempts: "No attempt limit",
-    },
+    eligibility: { education: "Undergraduate degree or currently pursuing eligible degree", age: "No age limit", attempts: "No attempt limit" },
     stages: ["Computer Based Test", "Score", "Admission / Recruitment"],
     syllabus: [
       {
         stage: "GATE (paper-specific)",
         papers: [
-          {
-            name: "General Aptitude (common to all papers)",
-            topics: [
-              "Verbal Ability — English grammar, sentence completion, verbal analogies, word groups, instructions, critical reasoning, verbal deduction",
-              "Numerical Ability — Numerical computation, numerical estimation, numerical reasoning, data interpretation",
-            ],
-          },
-          {
-            name: "Subject paper (chosen discipline)",
-            topics: [
-              "Core engineering/science topics as per the chosen GATE paper code (CS, ME, EE, EC, CE, etc.)",
-              "Engineering Mathematics (for most papers)",
-              "See official GATE brochure for the full syllabus of your paper",
-            ],
-          },
+          { name: "General Aptitude (common to all papers)", topics: ["Verbal Ability — English grammar, sentence completion, verbal analogies, word groups, instructions, critical reasoning, verbal deduction", "Numerical Ability — Numerical computation, numerical estimation, numerical reasoning, data interpretation"] },
+          { name: "Subject paper (chosen discipline)", topics: ["Core engineering/science topics as per the chosen GATE paper code (CS, ME, EE, EC, CE, etc.)", "Engineering Mathematics (for most papers)", "See official GATE brochure for the full syllabus of your paper"] },
         ],
       },
     ],
@@ -375,44 +261,15 @@ const EXAMS = [
     applicationStart: "2026-08-01",
     applicationEnd: "2026-09-15",
     description: "A national-level management entrance examination primarily used by IIMs and other business schools.",
-    eligibility: {
-      education: "Bachelor's degree",
-      age: "No age limit",
-      attempts: "No attempt limit",
-    },
+    eligibility: { education: "Bachelor's degree", age: "No age limit", attempts: "No attempt limit" },
     stages: ["Computer Based Test", "Shortlisting", "Further admission process"],
     syllabus: [
       {
         stage: "Three sections (40 min each)",
         papers: [
-          {
-            name: "VARC — Verbal Ability & Reading Comprehension",
-            topics: [
-              "Reading Comprehension (inference, specific detail, tone, critical analysis)",
-              "Para Jumbles / Jumbled Paragraphs",
-              "Para Summary",
-              "Odd Sentence Out",
-              "Verbal reasoning & logic (no direct grammar/spelling questions)",
-            ],
-          },
-          {
-            name: "DILR — Data Interpretation & Logical Reasoning",
-            topics: [
-              "Tables, Bar/Line/Pie/Column graphs, Caselets, Venn diagrams",
-              "Seating arrangements (linear/circular), Blood relations, Puzzles",
-              "Binary logic, Games & tournaments, Routes & networks",
-              "Data sufficiency, Sets, Ranking & ordering",
-            ],
-          },
-          {
-            name: "Quantitative Aptitude",
-            topics: [
-              "Arithmetic: Percentages, Ratio & Proportion, Averages, Profit & Loss, SI/CI, Time-Speed-Distance, Time & Work, Mixtures",
-              "Algebra: Equations, Inequalities, Functions, Logarithms, Progressions",
-              "Geometry & Mensuration: Triangles, Circles, Polygons, 2D/3D figures",
-              "Number System, Modern Math (Probability, Permutation & Combination, Set Theory)",
-            ],
-          },
+          { name: "VARC — Verbal Ability & Reading Comprehension", topics: ["Reading Comprehension (inference, specific detail, tone, critical analysis)", "Para Jumbles / Jumbled Paragraphs", "Para Summary", "Odd Sentence Out", "Verbal reasoning & logic (no direct grammar/spelling questions)"] },
+          { name: "DILR — Data Interpretation & Logical Reasoning", topics: ["Tables, Bar/Line/Pie/Column graphs, Caselets, Venn diagrams", "Seating arrangements (linear/circular), Blood relations, Puzzles", "Binary logic, Games & tournaments, Routes & networks", "Data sufficiency, Sets, Ranking & ordering"] },
+          { name: "Quantitative Aptitude", topics: ["Arithmetic: Percentages, Ratio & Proportion, Averages, Profit & Loss, SI/CI, Time-Speed-Distance, Time & Work, Mixtures", "Algebra: Equations, Inequalities, Functions, Logarithms, Progressions", "Geometry & Mensuration: Triangles, Circles, Polygons, 2D/3D figures", "Number System, Modern Math (Probability, Permutation & Combination, Set Theory)"] },
         ],
       },
     ],
@@ -428,52 +285,15 @@ const EXAMS = [
     applicationStart: "2027-02-01",
     applicationEnd: "2027-03-15",
     description: "The national entrance examination for undergraduate medical education in India.",
-    eligibility: {
-      education: "10+2 with required subjects",
-      age: "As specified by NTA",
-      attempts: "As specified by NTA",
-    },
+    eligibility: { education: "10+2 with required subjects", age: "As specified by NTA", attempts: "As specified by NTA" },
     stages: ["Entrance Examination", "Result", "Counselling"],
     syllabus: [
       {
         stage: "Single paper (PCB)",
         papers: [
-          {
-            name: "Physics",
-            topics: [
-              "Physics & Measurement, Kinematics, Laws of Motion",
-              "Work, Energy & Power, Rotational Motion, Gravitation",
-              "Properties of Solids & Liquids, Thermodynamics, Kinetic Theory",
-              "Oscillations & Waves",
-              "Electrostatics, Current Electricity, Magnetic Effects & Magnetism",
-              "EMI & Alternating Currents, Electromagnetic Waves, Optics",
-              "Dual Nature of Matter & Radiation, Atoms & Nuclei, Electronic Devices",
-              "Experimental Skills",
-            ],
-          },
-          {
-            name: "Chemistry",
-            topics: [
-              "Physical: Basic Concepts, Atomic Structure, Chemical Bonding, Thermodynamics, Solutions, Equilibrium, Redox & Electrochemistry, Chemical Kinetics",
-              "Inorganic: Classification of Elements & Periodicity, p-Block, d- & f-Block, Coordination Compounds",
-              "Organic: Purification & Characterisation, Basic Principles, Hydrocarbons, Compounds containing Halogens/Oxygen/Nitrogen, Biomolecules",
-            ],
-          },
-          {
-            name: "Biology (Botany + Zoology)",
-            topics: [
-              "Diversity in the Living World",
-              "Structural Organisation in Animals & Plants",
-              "Cell Structure & Function",
-              "Plant Physiology",
-              "Human Physiology",
-              "Reproduction",
-              "Genetics & Evolution",
-              "Biology & Human Welfare",
-              "Biotechnology & Its Applications",
-              "Ecology & Environment",
-            ],
-          },
+          { name: "Physics", topics: ["Physics & Measurement, Kinematics, Laws of Motion", "Work, Energy & Power, Rotational Motion, Gravitation", "Properties of Solids & Liquids, Thermodynamics, Kinetic Theory", "Oscillations & Waves", "Electrostatics, Current Electricity, Magnetic Effects & Magnetism", "EMI & Alternating Currents, Electromagnetic Waves, Optics", "Dual Nature of Matter & Radiation, Atoms & Nuclei, Electronic Devices", "Experimental Skills"] },
+          { name: "Chemistry", topics: ["Physical: Basic Concepts, Atomic Structure, Chemical Bonding, Thermodynamics, Solutions, Equilibrium, Redox & Electrochemistry, Chemical Kinetics", "Inorganic: Classification of Elements & Periodicity, p-Block, d- & f-Block, Coordination Compounds", "Organic: Purification & Characterisation, Basic Principles, Hydrocarbons, Compounds containing Halogens/Oxygen/Nitrogen, Biomolecules"] },
+          { name: "Biology (Botany + Zoology)", topics: ["Diversity in the Living World", "Structural Organisation in Animals & Plants", "Cell Structure & Function", "Plant Physiology", "Human Physiology", "Reproduction", "Genetics & Evolution", "Biology & Human Welfare", "Biotechnology & Its Applications", "Ecology & Environment"] },
         ],
       },
     ],
@@ -495,11 +315,7 @@ function daysLeft(dateString) {
 
 function formatDate(dateString) {
   if (!dateString) return "Not available";
-  return new Date(dateString).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return new Date(dateString).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function getCountdownText(days) {
@@ -510,35 +326,30 @@ function getCountdownText(days) {
 }
 
 /* =========================================================
-   HERO
+   HERO (Smart Calendar)
 ========================================================= */
-function HeroPass({ trackedCount }) {
+function HeroPass({ trackedCount, exams }) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
+  const examDateMap = React.useMemo(() => {
+    const map = {};
+    exams.forEach((exam) => {
+      const d = new Date(exam.examDate);
+      d.setHours(0, 0, 0, 0);
+      const key = d.toDateString();
+      if (!map[key]) map[key] = [];
+      map[key].push(exam);
+    });
+    return map;
+  }, [exams]);
+
+  const selectedKey = selectedDate.toDateString();
+  const examsOnSelected = examDateMap[selectedKey] || [];
+
   return (
-    <div
-      style={{
-        marginBottom: 18,
-        background: C.ink,
-        color: "#fff",
-        borderRadius: 14,
-        padding: "22px 20px",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          right: -25,
-          top: -35,
-          width: 130,
-          height: 130,
-          borderRadius: "50%",
-          border: "2px solid rgba(255,255,255,0.12)",
-        }}
-      />
+    <div style={{ marginBottom: 18, background: C.ink, color: "#fff", borderRadius: 14, padding: "22px 20px", position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "absolute", right: -25, top: -35, width: 130, height: 130, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.12)" }} />
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 15, position: "relative", zIndex: 1 }}>
         <div>
@@ -551,16 +362,7 @@ function HeroPass({ trackedCount }) {
           </div>
         </div>
 
-        <div
-          style={{
-            flexShrink: 0,
-            textAlign: "center",
-            background: "rgba(255,255,255,0.1)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 10,
-            padding: "9px 12px",
-          }}
-        >
+        <div style={{ flexShrink: 0, textAlign: "center", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "9px 12px" }}>
           <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700 }}>{trackedCount}</div>
           <div style={{ fontFamily: bodyFont, fontSize: 10, color: "rgba(255,255,255,0.65)" }}>TRACKED</div>
         </div>
@@ -568,22 +370,7 @@ function HeroPass({ trackedCount }) {
 
       <button
         onClick={() => setShowCalendar(!showCalendar)}
-        style={{
-          marginTop: 18,
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          padding: "11px",
-          borderRadius: 10,
-          border: "1px solid rgba(255,255,255,0.15)",
-          background: "rgba(255,255,255,0.08)",
-          color: "#fff",
-          cursor: "pointer",
-          fontFamily: bodyFont,
-          fontWeight: 600,
-        }}
+        style={{ marginTop: 18, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.08)", color: "#fff", cursor: "pointer", fontFamily: bodyFont, fontWeight: 600 }}
       >
         <CalendarDays size={18} />
         {showCalendar ? "Hide Calendar" : "Open Calendar"}
@@ -591,12 +378,33 @@ function HeroPass({ trackedCount }) {
 
       {showCalendar && (
         <div style={{ marginTop: 15, background: "#fff", borderRadius: 12, padding: 12, color: "#111" }}>
-          <Calendar value={selectedDate} onChange={setSelectedDate} />
-          <div style={{ marginTop: 12, textAlign: "center", fontFamily: bodyFont, fontWeight: 600, color: C.ink }}>
-            Selected Date
-          </div>
-          <div style={{ textAlign: "center", marginTop: 4, fontFamily: monoFont, color: C.green, fontSize: 15 }}>
-            {selectedDate.toDateString()}
+          <style>{`
+            .react-calendar__tile.has-exam { position: relative; font-weight: 700; color: #14213d !important; }
+            .react-calendar__tile.has-exam::after { content: ""; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: #c84c4c; }
+            .react-calendar__tile--active.has-exam::after { background: #fff; }
+          `}</style>
+
+          <Calendar
+            value={selectedDate}
+            onChange={setSelectedDate}
+            tileClassName={({ date }) => (examDateMap[date.toDateString()] ? "has-exam" : null)}
+          />
+
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontFamily: bodyFont, fontWeight: 600, color: C.ink, fontSize: 14, marginBottom: 8 }}>
+              {selectedDate.toDateString()}
+            </div>
+            {examsOnSelected.length === 0 ? (
+              <div style={{ fontSize: 13, color: C.inkSoft }}>No exams on this day</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {examsOnSelected.map((exam) => (
+                  <div key={exam.id} style={{ background: C.softBlue, borderRadius: 8, padding: "8px 10px", fontSize: 13, fontWeight: 600, color: C.ink }}>
+                    {exam.shortName} — {exam.name}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -611,35 +419,14 @@ function ExamCard({ exam, starred, onToggleStar, onOpen }) {
   const dl = daysLeft(exam.examDate);
 
   return (
-    <div
-      className="hp-card"
-      style={{
-        background: C.surface,
-        border: `1px solid ${C.line}`,
-        borderRadius: 12,
-        padding: 16,
-        position: "relative",
-      }}
-    >
+    <div className="hp-card" style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, position: "relative" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
         <div>
-          <div style={{ fontFamily: monoFont, fontSize: 10, textTransform: "uppercase", color: C.inkSoft, marginBottom: 5 }}>
-            {exam.category}
-          </div>
-          <div style={{ fontFamily: displayFont, fontSize: 20, fontWeight: 700, color: C.ink }}>
-            {exam.shortName}
-          </div>
-          <div style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft, marginTop: 3, lineHeight: 1.4 }}>
-            {exam.name}
-          </div>
+          <div style={{ fontFamily: monoFont, fontSize: 10, textTransform: "uppercase", color: C.inkSoft, marginBottom: 5 }}>{exam.category}</div>
+          <div style={{ fontFamily: displayFont, fontSize: 20, fontWeight: 700, color: C.ink }}>{exam.shortName}</div>
+          <div style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft, marginTop: 3, lineHeight: 1.4 }}>{exam.name}</div>
         </div>
-
-        <button
-          className="hp-tap"
-          onClick={() => onToggleStar(exam.id)}
-          aria-label={starred ? `Unstar ${exam.shortName}` : `Star ${exam.shortName}`}
-          style={{ border: "none", background: "transparent", cursor: "pointer", color: starred ? C.yellow : C.inkSoft, padding: 0 }}
-        >
+        <button className="hp-tap" onClick={() => onToggleStar(exam.id)} aria-label={starred ? `Unstar ${exam.shortName}` : `Star ${exam.shortName}`} style={{ border: "none", background: "transparent", cursor: "pointer", color: starred ? C.yellow : C.inkSoft, padding: 0 }}>
           <Star size={20} fill={starred ? C.yellow : "none"} />
         </button>
       </div>
@@ -649,42 +436,17 @@ function ExamCard({ exam, starred, onToggleStar, onOpen }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
           <div style={{ fontFamily: monoFont, fontSize: 9.5, color: C.inkSoft, textTransform: "uppercase" }}>Exam date</div>
-          <div style={{ fontFamily: bodyFont, fontSize: 13, fontWeight: 600, color: C.ink, marginTop: 3 }}>
-            {formatDate(exam.examDate)}
-          </div>
+          <div style={{ fontFamily: bodyFont, fontSize: 13, fontWeight: 600, color: C.ink, marginTop: 3 }}>{formatDate(exam.examDate)}</div>
         </div>
         <div>
           <div style={{ fontFamily: monoFont, fontSize: 9.5, color: C.inkSoft, textTransform: "uppercase" }}>Countdown</div>
-          <div
-            style={{
-              fontFamily: monoFont,
-              fontSize: 13,
-              fontWeight: 600,
-              color: dl <= 14 ? C.red : dl <= 30 ? C.yellow : C.green,
-              marginTop: 3,
-            }}
-          >
+          <div style={{ fontFamily: monoFont, fontSize: 13, fontWeight: 600, color: dl <= 14 ? C.red : dl <= 30 ? C.yellow : C.green, marginTop: 3 }}>
             {getCountdownText(dl)}
           </div>
         </div>
       </div>
 
-      <button
-        onClick={() => onOpen(exam.id)}
-        style={{
-          width: "100%",
-          marginTop: 15,
-          border: `1px solid ${C.line}`,
-          background: C.bg,
-          color: C.ink,
-          borderRadius: 8,
-          padding: "8px 10px",
-          cursor: "pointer",
-          fontFamily: bodyFont,
-          fontSize: 12.5,
-          fontWeight: 600,
-        }}
-      >
+      <button onClick={() => onOpen(exam.id)} style={{ width: "100%", marginTop: 15, border: `1px solid ${C.line}`, background: C.bg, color: C.ink, borderRadius: 8, padding: "8px 10px", cursor: "pointer", fontFamily: bodyFont, fontSize: 12.5, fontWeight: 600 }}>
         View exam details
       </button>
     </div>
@@ -692,24 +454,91 @@ function ExamCard({ exam, starred, onToggleStar, onOpen }) {
 }
 
 /* =========================================================
-   SYLLABUS PANEL
+   SYLLABUS PANEL (Progress Tracking)
 ========================================================= */
-function SyllabusPanel({ exam }) {
+function SyllabusPanel({ exam, user }) {
   const stages = exam.syllabus || [];
-  const [openKey, setOpenKey] = useState(() =>
-    stages.length && stages[0].papers?.length ? `${stages[0].stage}-0` : null
-  );
+  const [openKey, setOpenKey] = useState(() => (stages.length && stages[0].papers?.length ? `${stages[0].stage}-0` : null));
+  const [completed, setCompleted] = useState(new Set());
+  const [progressLoading, setProgressLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      setCompleted(new Set());
+      setProgressLoading(false);
+      return;
+    }
+    setProgressLoading(true);
+    const progressRef = collection(db, "progress");
+    const q = firestoreQuery(progressRef, where("userId", "==", user.uid), where("examId", "==", exam.id));
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        if (snapshot.empty) setCompleted(new Set());
+        else setCompleted(new Set(snapshot.docs[0].data().completedTopics || []));
+        setProgressLoading(false);
+      },
+      (err) => {
+        console.error("Error loading progress:", err);
+        setProgressLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [user, exam.id]);
+
+  const toggleTopic = async (topicKey) => {
+    if (!user) {
+      alert("Please log in to track progress.");
+      return;
+    }
+    const next = new Set(completed);
+    if (next.has(topicKey)) next.delete(topicKey);
+    else next.add(topicKey);
+    setCompleted(next);
+
+    try {
+      const progressRef = collection(db, "progress");
+      const q = firestoreQuery(progressRef, where("userId", "==", user.uid), where("examId", "==", exam.id));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        await addDoc(progressRef, { userId: user.uid, examId: exam.id, completedTopics: [...next], updatedAt: serverTimestamp() });
+      } else {
+        await updateDoc(doc(db, "progress", snapshot.docs[0].id), { completedTopics: [...next], updatedAt: serverTimestamp() });
+      }
+    } catch (err) {
+      console.error("Error saving progress:", err);
+      alert("Could not save progress. Please try again.");
+    }
+  };
+
+  let totalTopics = 0;
+  stages.forEach((stage) => stage.papers.forEach((paper) => (totalTopics += paper.topics.length)));
+  const progressPercent = totalTopics === 0 ? 0 : Math.round((completed.size / totalTopics) * 100);
 
   if (stages.length === 0) return null;
 
   return (
     <section style={{ marginBottom: 22 }}>
-      <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 8px", color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
-        <List size={18} color={C.inkSoft} />
-        Syllabus breakdown
-      </h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: 0, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
+          <List size={18} color={C.inkSoft} />
+          Syllabus breakdown
+        </h2>
+        {!progressLoading && (
+          <div style={{ fontFamily: monoFont, fontSize: 13, fontWeight: 600, color: progressPercent === 100 ? C.green : C.ink }}>
+            {progressPercent}%
+          </div>
+        )}
+      </div>
+
+      <div style={{ height: 6, background: C.line, borderRadius: 99, marginBottom: 12, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${progressPercent}%`, background: progressPercent === 100 ? C.green : C.ink, borderRadius: 99, transition: "width 0.3s ease" }} />
+      </div>
+
       <div style={{ fontFamily: bodyFont, fontSize: 12, color: C.inkSoft, marginBottom: 12 }}>
-        Official topic outlines by stage. Always cross-check the latest notification on the official site.
+        Tick topics as you complete them. Progress is saved to your account.
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -718,53 +547,31 @@ function SyllabusPanel({ exam }) {
             const key = `${stage.stage}-${pi}`;
             const isOpen = openKey === key;
             return (
-              <div key={key} style={{ border: `1px solid ${C.line}`, overflow: "hidden", background: C.surface, borderRadius: 10 }}>
+              <div key={key} style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden", background: C.surface }}>
                 <button
                   onClick={() => setOpenKey(isOpen ? null : key)}
                   className="hp-tap"
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    background: C.bg,
-                    border: "none",
-                    padding: "10px 12px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: C.bg, border: "none", padding: "10px 12px", cursor: "pointer", textAlign: "left" }}
                 >
                   <div>
-                    <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, textTransform: "uppercase", letterSpacing: 0.4 }}>
-                      {stage.stage}
-                    </div>
-                    <div style={{ fontFamily: bodyFont, fontSize: 13.5, fontWeight: 600, color: C.ink, marginTop: 2 }}>
-                      {paper.name}
-                    </div>
+                    <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, textTransform: "uppercase", letterSpacing: 0.4 }}>{stage.stage}</div>
+                    <div style={{ fontFamily: bodyFont, fontSize: 13.5, fontWeight: 600, color: C.ink, marginTop: 2 }}>{paper.name}</div>
                   </div>
-                  <ChevronDown
-                    size={16}
-                    color={C.inkSoft}
-                    style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .15s", flexShrink: 0 }}
-                  />
+                  <ChevronDown size={16} color={C.inkSoft} style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .15s", flexShrink: 0 }} />
                 </button>
+
                 {isOpen && (
-                  <ul style={{ margin: 0, padding: "8px 14px 12px 28px", background: "#fff" }}>
-                    {paper.topics.map((t, ti) => (
-                      <li
-                        key={ti}
-                        style={{
-                          fontFamily: bodyFont,
-                          fontSize: 12.5,
-                          color: C.inkSoft,
-                          lineHeight: 1.55,
-                          marginTop: ti === 0 ? 0 : 6,
-                        }}
-                      >
-                        {t}
-                      </li>
-                    ))}
+                  <ul style={{ margin: 0, padding: "8px 14px 12px 14px", background: "#fff", listStyle: "none" }}>
+                    {paper.topics.map((topic, ti) => {
+                      const topicKey = `${stage.stage}::${paper.name}::${topic}`;
+                      const isDone = completed.has(topicKey);
+                      return (
+                        <li key={ti} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 0", borderTop: ti === 0 ? "none" : `1px solid ${C.line}` }}>
+                          <input type="checkbox" checked={isDone} onChange={() => toggleTopic(topicKey)} style={{ marginTop: 3, width: 16, height: 16, accentColor: C.ink, cursor: "pointer", flexShrink: 0 }} />
+                          <span style={{ fontFamily: bodyFont, fontSize: 12.5, color: isDone ? C.inkSoft : C.ink, lineHeight: 1.5, textDecoration: isDone ? "line-through" : "none" }}>{topic}</span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>
@@ -784,22 +591,7 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
 
   return (
     <div>
-      <button
-        onClick={onBack}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 5,
-          background: "transparent",
-          border: "none",
-          padding: "5px 0",
-          marginBottom: 14,
-          color: C.inkSoft,
-          cursor: "pointer",
-          fontFamily: bodyFont,
-          fontSize: 13,
-        }}
-      >
+      <button onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "transparent", border: "none", padding: "5px 0", marginBottom: 14, color: C.inkSoft, cursor: "pointer", fontFamily: bodyFont, fontSize: 13 }}>
         <ChevronLeft size={17} />
         Back to exams
       </button>
@@ -808,29 +600,11 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
         <div style={{ padding: 20, background: C.ink, color: "#fff" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 15 }}>
             <div>
-              <div style={{ fontFamily: monoFont, fontSize: 10, textTransform: "uppercase", opacity: 0.65, marginBottom: 6 }}>
-                {exam.category}
-              </div>
-              <h1 style={{ fontFamily: displayFont, fontSize: 30, lineHeight: 1.1, margin: 0 }}>
-                {exam.shortName}
-              </h1>
-              <div style={{ fontFamily: bodyFont, fontSize: 13, opacity: 0.75, marginTop: 6 }}>
-                {exam.name}
-              </div>
+              <div style={{ fontFamily: monoFont, fontSize: 10, textTransform: "uppercase", opacity: 0.65, marginBottom: 6 }}>{exam.category}</div>
+              <h1 style={{ fontFamily: displayFont, fontSize: 30, lineHeight: 1.1, margin: 0 }}>{exam.shortName}</h1>
+              <div style={{ fontFamily: bodyFont, fontSize: 13, opacity: 0.75, marginTop: 6 }}>{exam.name}</div>
             </div>
-
-            <button
-              onClick={() => onToggleStar(exam.id)}
-              aria-label={starred ? "Remove from starred" : "Add to starred"}
-              style={{
-                border: "none",
-                background: "rgba(255,255,255,0.1)",
-                color: starred ? "#f4c64e" : "#fff",
-                borderRadius: 9,
-                padding: 9,
-                cursor: "pointer",
-              }}
-            >
+            <button onClick={() => onToggleStar(exam.id)} aria-label={starred ? "Remove from starred" : "Add to starred"} style={{ border: "none", background: "rgba(255,255,255,0.1)", color: starred ? "#f4c64e" : "#fff", borderRadius: 9, padding: 9, cursor: "pointer" }}>
               <Star size={22} fill={starred ? "#f4c64e" : "none"} />
             </button>
           </div>
@@ -840,23 +614,17 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 20 }}>
             <div style={{ background: C.softBlue, borderRadius: 10, padding: 12 }}>
               <div style={{ fontFamily: monoFont, fontSize: 9, color: C.inkSoft, textTransform: "uppercase" }}>Exam date</div>
-              <div style={{ fontFamily: bodyFont, fontSize: 14, fontWeight: 600, color: C.ink, marginTop: 4 }}>
-                {formatDate(exam.examDate)}
-              </div>
+              <div style={{ fontFamily: bodyFont, fontSize: 14, fontWeight: 600, color: C.ink, marginTop: 4 }}>{formatDate(exam.examDate)}</div>
             </div>
             <div style={{ background: dl <= 14 ? C.softRed : C.softGreen, borderRadius: 10, padding: 12 }}>
               <div style={{ fontFamily: monoFont, fontSize: 9, color: C.inkSoft, textTransform: "uppercase" }}>Countdown</div>
-              <div style={{ fontFamily: monoFont, fontSize: 14, fontWeight: 700, color: dl <= 14 ? C.red : C.green, marginTop: 4 }}>
-                {getCountdownText(dl)}
-              </div>
+              <div style={{ fontFamily: monoFont, fontSize: 14, fontWeight: 700, color: dl <= 14 ? C.red : C.green, marginTop: 4 }}>{getCountdownText(dl)}</div>
             </div>
           </div>
 
           <section style={{ marginBottom: 22 }}>
             <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 8px", color: C.ink }}>About the exam</h2>
-            <p style={{ fontFamily: bodyFont, fontSize: 13.5, lineHeight: 1.6, color: C.inkSoft, margin: 0 }}>
-              {exam.description}
-            </p>
+            <p style={{ fontFamily: bodyFont, fontSize: 13.5, lineHeight: 1.6, color: C.inkSoft, margin: 0 }}>{exam.description}</p>
           </section>
 
           <section style={{ marginBottom: 22 }}>
@@ -882,21 +650,7 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {exam.stages.map((stage, index) => (
                 <div key={stage} style={{ display: "flex", alignItems: "center", gap: 9, fontFamily: bodyFont, fontSize: 13, color: C.inkSoft }}>
-                  <span
-                    style={{
-                      width: 23,
-                      height: 23,
-                      borderRadius: "50%",
-                      background: C.ink,
-                      color: "#fff",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontFamily: monoFont,
-                      fontSize: 10,
-                      flexShrink: 0,
-                    }}
-                  >
+                  <span style={{ width: 23, height: 23, borderRadius: "50%", background: C.ink, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: monoFont, fontSize: 10, flexShrink: 0 }}>
                     {index + 1}
                   </span>
                   {stage}
@@ -905,52 +659,15 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
             </div>
           </section>
 
-          <SyllabusPanel exam={exam} />
+          <SyllabusPanel exam={exam} user={user} />
 
           <section style={{ borderTop: `1px solid ${C.line}`, paddingTop: 18 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
-              <a
-                href={exam.officialWebsite}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: C.ink,
-                  color: "#fff",
-                  textDecoration: "none",
-                  borderRadius: 8,
-                  padding: "9px 12px",
-                  fontFamily: bodyFont,
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                }}
-              >
-                Official website
-                <ExternalLink size={14} />
+              <a href={exam.officialWebsite} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.ink, color: "#fff", textDecoration: "none", borderRadius: 8, padding: "9px 12px", fontFamily: bodyFont, fontSize: 12.5, fontWeight: 600 }}>
+                Official website <ExternalLink size={14} />
               </a>
-              <a
-                href={exam.notificationUrl}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: C.bg,
-                  color: C.ink,
-                  textDecoration: "none",
-                  border: `1px solid ${C.line}`,
-                  borderRadius: 8,
-                  padding: "9px 12px",
-                  fontFamily: bodyFont,
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                }}
-              >
-                Exam information
-                <FileText size={14} />
+              <a href={exam.notificationUrl} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.bg, color: C.ink, textDecoration: "none", border: `1px solid ${C.line}`, borderRadius: 8, padding: "9px 12px", fontFamily: bodyFont, fontSize: 12.5, fontWeight: 600 }}>
+                Exam information <FileText size={14} />
               </a>
             </div>
           </section>
@@ -992,10 +709,10 @@ export default function App() {
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
   const [noteTags, setNoteTags] = useState("");
+  const [noteExamId, setNoteExamId] = useState("");
+  const [notePinned, setNotePinned] = useState(false);
 
-  /* =======================================================
-     FIREBASE AUTH STATE
-  ======================================================= */
+  /* Auth */
   useEffect(() => {
     if (!auth) {
       setAuthLoading(false);
@@ -1016,13 +733,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  /* =======================================================
-     LIVE NOTES (onSnapshot)
-     Keeps notes in sync in real time — across refreshes,
-     tabs, and devices — and surfaces read errors
-     (e.g. permission-denied from security rules)
-     instead of silently showing an empty list.
-  ======================================================= */
+  /* Live notes */
   useEffect(() => {
     if (!user) {
       setNotes([]);
@@ -1042,45 +753,27 @@ export default function App() {
       unsubscribe = onSnapshot(
         notesQuery,
         (snapshot) => {
-          const loadedNotes = snapshot.docs
-            .map((noteDoc) => ({ id: noteDoc.id, ...noteDoc.data() }))
-            .sort((a, b) => {
-              const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-              const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-              return bTime - aTime;
-            });
+          const loadedNotes = snapshot.docs.map((noteDoc) => ({ id: noteDoc.id, ...noteDoc.data() }));
           setNotes(loadedNotes);
           setNotesLoading(false);
           setNotesError(null);
         },
         (error) => {
-          // This fires on permission-denied, offline, etc. —
-          // surfacing it turns a silent "notes vanished" into a diagnosable error.
           console.error("Error loading notes:", error);
-          setNotesError(
-            error.code === "permission-denied"
-              ? "Can't load notes — check Firestore security rules for the 'notes' collection."
-              : "Can't load notes right now. Check your connection and try again."
-          );
+          setNotesError(error.code === "permission-denied" ? "Can't load notes — check Firestore security rules." : "Can't load notes right now.");
           setNotesLoading(false);
         }
       );
     } catch (error) {
-      // Catches synchronous setup errors (e.g. a bad query call)
-      // so they can never crash the whole app.
       console.error("Error setting up notes listener:", error);
-      setNotesError("Can't load notes right now. Please refresh the page.");
+      setNotesError("Can't load notes right now. Please refresh.");
       setNotesLoading(false);
     }
 
     return () => unsubscribe();
   }, [user]);
 
-  /* =======================================================
-     LOAD STARRED EXAMS
-     Uses browser localStorage.
-     This avoids requiring Firestore for this feature.
-  ======================================================= */
+  /* Starred */
   useEffect(() => {
     if (!user) {
       setStarred(new Set());
@@ -1092,11 +785,8 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         setStarred(Array.isArray(parsed) ? new Set(parsed) : new Set());
-      } else {
-        setStarred(new Set());
-      }
-    } catch (error) {
-      console.error("Could not load starred exams:", error);
+      } else setStarred(new Set());
+    } catch {
       setStarred(new Set());
     } finally {
       setStarLoaded(true);
@@ -1115,52 +805,45 @@ export default function App() {
 
     try {
       const tags = noteTags.split(",").map((t) => t.trim()).filter(Boolean);
+      const noteData = {
+        title: noteTitle.trim(),
+        content: noteContent.trim(),
+        tags,
+        examId: noteExamId || null,
+        pinned: notePinned,
+        updatedAt: serverTimestamp(),
+      };
 
       if (editingNote) {
-        await updateDoc(doc(db, "notes", editingNote), {
-          title: noteTitle.trim(),
-          content: noteContent.trim(),
-          tags,
-          updatedAt: serverTimestamp(),
-        });
-        // No local setNotes needed — the onSnapshot listener
-        // above will pick up this write and update state automatically.
+        await updateDoc(doc(db, "notes", editingNote), noteData);
       } else {
-        await addDoc(collection(db, "notes"), {
-          userId: user.uid,
-          title: noteTitle.trim(),
-          content: noteContent.trim(),
-          tags,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-        // Same here — onSnapshot will add the new note to state
-        // once Firestore confirms the write.
+        await addDoc(collection(db, "notes"), { ...noteData, userId: user.uid, createdAt: serverTimestamp() });
       }
 
       setNoteTitle("");
       setNoteContent("");
       setNoteTags("");
+      setNoteExamId("");
+      setNotePinned(false);
       setEditingNote(null);
     } catch (error) {
       console.error("Error saving note:", error);
-      alert("Could not save the note. Please try again.");
+      alert("Could not save the note.");
     }
   };
 
   const deleteNote = async (noteId) => {
     if (!user) return;
     if (!window.confirm("Are you sure you want to delete this note?")) return;
-
     try {
       await deleteDoc(doc(db, "notes", noteId));
-      // onSnapshot will remove it from state once the delete is confirmed.
-
       if (editingNote === noteId) {
         setEditingNote(null);
         setNoteTitle("");
         setNoteContent("");
         setNoteTags("");
+        setNoteExamId("");
+        setNotePinned(false);
       }
     } catch (error) {
       console.error("Error deleting note:", error);
@@ -1168,9 +851,6 @@ export default function App() {
     }
   };
 
-  /* =======================================================
-     STAR / TRACK EXAM
-  ======================================================= */
   const toggleStar = useCallback(
     (id) => {
       if (!user) return;
@@ -1180,55 +860,87 @@ export default function App() {
         else next.add(id);
         try {
           localStorage.setItem(`hallpass-starred:${user.uid}`, JSON.stringify([...next]));
-        } catch (error) {
-          console.error("Could not save starred exams:", error);
-        }
+        } catch {}
         return next;
       });
     },
     [user]
   );
 
-  const categories = ["All", ...Array.from(new Set(EXAMS.map((e) => e.category)))];
-
-  const filtered = EXAMS.filter((exam) => {
-    const searchText = query.trim().toLowerCase();
-    const matchesSearch =
-      searchText === "" ||
-      exam.shortName.toLowerCase().includes(searchText) ||
-      exam.name.toLowerCase().includes(searchText) ||
-      exam.category.toLowerCase().includes(searchText);
-    const matchesCategory = category === "All" || exam.category === category;
-    return matchesSearch && matchesCategory;
-  });
-
-  const starredExams = EXAMS
-    .filter((exam) => starred.has(exam.id))
-    .sort((a, b) => daysLeft(a.examDate) - daysLeft(b.examDate));
-
-  const selectedExam = EXAMS.find((exam) => exam.id === selectedId);
-
-  const filteredNotes = notes.filter((note) => {
-    const search = noteSearch.trim().toLowerCase();
-    if (!search) return true;
-    return (
-      note.title?.toLowerCase().includes(search) ||
-      note.content?.toLowerCase().includes(search) ||
-      note.tags?.some((tag) => tag.toLowerCase().includes(search))
-    );
-  });
-
   const startEditingNote = (note) => {
     setEditingNote(note.id);
     setNoteTitle(note.title || "");
     setNoteContent(note.content || "");
     setNoteTags(Array.isArray(note.tags) ? note.tags.join(", ") : "");
+    setNoteExamId(note.examId || "");
+    setNotePinned(!!note.pinned);
     setShowNotes(true);
   };
 
-  /* =======================================================
-     AUTH LOADING SCREEN
-  ======================================================= */
+  const exportNoteAsTxt = (note) => {
+    const linkedExam = EXAMS.find((e) => e.id === note.examId);
+    let text = `${note.title || "Untitled Note"}\n${"=".repeat(40)}\n\n`;
+    if (linkedExam) text += `Exam: ${linkedExam.shortName}\n\n`;
+    text += note.content || "";
+    if (note.tags?.length) text += `\n\nTags: ${note.tags.join(", ")}`;
+
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(note.title || "note").replace(/[^a-z0-9]/gi, "_")}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportNoteAsPdf = (note) => {
+    const pdf = new jsPDF();
+    const linkedExam = EXAMS.find((e) => e.id === note.examId);
+
+    pdf.setFontSize(16);
+    pdf.text(note.title || "Untitled Note", 15, 20);
+
+    let y = 30;
+    if (linkedExam) {
+      pdf.setFontSize(11);
+      pdf.setTextColor(60, 100, 160);
+      pdf.text(`Exam: ${linkedExam.shortName}`, 15, y);
+      y += 10;
+    }
+
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(11);
+    const lines = pdf.splitTextToSize(note.content || "", 180);
+    pdf.text(lines, 15, y);
+    pdf.save(`${(note.title || "note").replace(/[^a-z0-9]/gi, "_")}.pdf`);
+  };
+
+  const categories = ["All", ...Array.from(new Set(EXAMS.map((e) => e.category)))];
+
+  const filtered = EXAMS.filter((exam) => {
+    const searchText = query.trim().toLowerCase();
+    const matchesSearch = searchText === "" || exam.shortName.toLowerCase().includes(searchText) || exam.name.toLowerCase().includes(searchText) || exam.category.toLowerCase().includes(searchText);
+    const matchesCategory = category === "All" || exam.category === category;
+    return matchesSearch && matchesCategory;
+  });
+
+  const starredExams = EXAMS.filter((exam) => starred.has(exam.id)).sort((a, b) => daysLeft(a.examDate) - daysLeft(b.examDate));
+  const selectedExam = EXAMS.find((exam) => exam.id === selectedId);
+
+  const filteredNotes = notes
+    .filter((note) => {
+      const search = noteSearch.trim().toLowerCase();
+      if (!search) return true;
+      return note.title?.toLowerCase().includes(search) || note.content?.toLowerCase().includes(search) || note.tags?.some((tag) => tag.toLowerCase().includes(search));
+    })
+    .sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return bTime - aTime;
+    });
+
   if (authLoading) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg, fontFamily: bodyFont, color: C.ink }}>
@@ -1243,129 +955,51 @@ export default function App() {
 
   if (!user) return <Auth />;
 
-  /* =======================================================
-     HALL PASS APP
-  ======================================================= */
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: `${OMR_BG}, ${C.bg}`,
-        backgroundSize: "18px 18px, auto",
-        fontFamily: bodyFont,
-        padding: "clamp(18px, 5vw, 28px) clamp(12px, 4vw, 16px) 60px",
-      }}
-    >
+    <div style={{ minHeight: "100vh", background: `${OMR_BG}, ${C.bg}`, backgroundSize: "18px 18px, auto", fontFamily: bodyFont, padding: "clamp(18px, 5vw, 28px) clamp(12px, 4vw, 16px) 60px" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
         body { margin: 0; }
-        button, input { font: inherit; }
-        input:focus, textarea:focus, button:focus-visible { outline: 2px solid ${C.ink}; outline-offset: 2px; }
+        button, input, select, textarea { font: inherit; }
+        input:focus, textarea:focus, button:focus-visible, select:focus { outline: 2px solid ${C.ink}; outline-offset: 2px; }
         .hp-tap { min-height: 34px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center; }
         .hp-eligibility-row { display: flex; gap: 8px; }
         .hp-eligibility-label { min-width: 84px; flex-shrink: 0; }
         .hp-card { transition: transform .15s ease, box-shadow .15s ease; }
         .hp-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(20,33,61,0.1); }
-        @media (prefers-reduced-motion: reduce) {
-          .hp-card, .hp-card:hover { transition: none; transform: none; }
-        }
-        @media (max-width: 460px) {
-          .hp-eligibility-row { flex-direction: column; gap: 1px; }
-          .hp-eligibility-label { min-width: 0; }
-        }
+        @media (prefers-reduced-motion: reduce) { .hp-card, .hp-card:hover { transition: none; transform: none; } }
+        @media (max-width: 460px) { .hp-eligibility-row { flex-direction: column; gap: 1px; } .hp-eligibility-label { min-width: 0; } }
       `}</style>
 
       <div style={{ maxWidth: 760, margin: "0 auto" }}>
-        <HeroPass trackedCount={starred.size} />
+        <HeroPass trackedCount={starred.size} exams={EXAMS} />
 
         {/* User bar */}
-        <div
-          style={{
-            background: C.surface,
-            border: `1px solid ${C.line}`,
-            borderRadius: 10,
-            padding: "9px 12px",
-            marginBottom: 18,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 10,
-          }}
-        >
+        <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 12px", marginBottom: 18, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <div style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             Signed in as <strong style={{ color: C.ink }}>{user.email}</strong>
           </div>
-          <button
-            onClick={async () => {
-              try { await signOut(auth); } catch (e) { console.error(e); }
-            }}
-            style={{
-              flexShrink: 0,
-              fontFamily: bodyFont,
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#fff",
-              background: C.red,
-              border: "none",
-              borderRadius: 7,
-              padding: "6px 11px",
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={async () => { try { await signOut(auth); } catch (e) { console.error(e); } }} style={{ flexShrink: 0, fontFamily: bodyFont, fontSize: 12, fontWeight: 600, color: "#fff", background: C.red, border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer" }}>
             Logout
           </button>
         </div>
 
         {view === "detail" && selectedExam ? (
-          <ExamDetail
-            exam={selectedExam}
-            starred={starred.has(selectedExam.id)}
-            onToggleStar={toggleStar}
-            user={user}
-            onBack={() => {
-              setView("home");
-              setSelectedId(null);
-            }}
-          />
+          <ExamDetail exam={selectedExam} starred={starred.has(selectedExam.id)} onToggleStar={toggleStar} user={user} onBack={() => { setView("home"); setSelectedId(null); }} />
         ) : (
           <>
-            {/* Starred */}
             {starLoaded && starredExams.length > 0 && (
               <div style={{ marginBottom: 24 }}>
-                <div style={{ fontFamily: monoFont, fontSize: 11, color: C.inkSoft, textTransform: "uppercase", marginBottom: 8 }}>
-                  ★ Your starred exams
-                </div>
+                <div style={{ fontFamily: monoFont, fontSize: 11, color: C.inkSoft, textTransform: "uppercase", marginBottom: 8 }}>★ Your starred exams</div>
                 <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
                   {starredExams.map((exam) => {
                     const dl = daysLeft(exam.examDate);
                     return (
-                      <button
-                        key={exam.id}
-                        onClick={() => {
-                          setSelectedId(exam.id);
-                          setView("detail");
-                        }}
-                        style={{
-                          flexShrink: 0,
-                          fontFamily: bodyFont,
-                          fontSize: 12.5,
-                          color: C.ink,
-                          background: C.surface,
-                          border: `1px solid ${C.line}`,
-                          borderRadius: 20,
-                          padding: "6px 12px",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
+                      <button key={exam.id} onClick={() => { setSelectedId(exam.id); setView("detail"); }} style={{ flexShrink: 0, fontFamily: bodyFont, fontSize: 12.5, color: C.ink, background: C.surface, border: `1px solid ${C.line}`, borderRadius: 20, padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                         {exam.shortName}
-                        <span style={{ fontFamily: monoFont, color: dl <= 14 ? C.red : C.green, fontWeight: 600 }}>
-                          {dl}d
-                        </span>
+                        <span style={{ fontFamily: monoFont, color: dl <= 14 ? C.red : C.green, fontWeight: 600 }}>{dl}d</span>
                       </button>
                     );
                   })}
@@ -1374,58 +1008,22 @@ export default function App() {
             )}
 
             {/* Search */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 14,
-                background: C.surface,
-                border: `1px solid ${C.line}`,
-                borderRadius: 10,
-                padding: "9px 12px",
-              }}
-            >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, background: C.surface, border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 12px" }}>
               <Search size={16} color={C.inkSoft} />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search exams — UPSC, SSC, JEE…"
-                aria-label="Search exams"
-                style={{ border: "none", outline: "none", background: "transparent", fontFamily: bodyFont, fontSize: 13.5, color: C.ink, width: "100%" }}
-              />
-              {query && (
-                <button onClick={() => setQuery("")} style={{ border: "none", background: "transparent", color: C.inkSoft, cursor: "pointer", fontSize: 12 }}>
-                  Clear
-                </button>
-              )}
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search exams — UPSC, SSC, JEE…" aria-label="Search exams" style={{ border: "none", outline: "none", background: "transparent", fontFamily: bodyFont, fontSize: 13.5, color: C.ink, width: "100%" }} />
+              {query && <button onClick={() => setQuery("")} style={{ border: "none", background: "transparent", color: C.inkSoft, cursor: "pointer", fontSize: 12 }}>Clear</button>}
             </div>
 
             {/* Categories */}
             <div style={{ display: "flex", gap: 8, marginBottom: 20, overflowX: "auto", paddingBottom: 4 }}>
               {categories.map((item) => (
-                <button
-                  key={item}
-                  onClick={() => setCategory(item)}
-                  style={{
-                    flexShrink: 0,
-                    fontFamily: bodyFont,
-                    fontSize: 12.5,
-                    fontWeight: category === item ? 600 : 400,
-                    color: category === item ? "#fff" : C.inkSoft,
-                    background: category === item ? C.ink : C.surface,
-                    border: `1px solid ${category === item ? C.ink : C.line}`,
-                    borderRadius: 20,
-                    padding: "6px 13px",
-                    cursor: "pointer",
-                  }}
-                >
+                <button key={item} onClick={() => setCategory(item)} style={{ flexShrink: 0, fontFamily: bodyFont, fontSize: 12.5, fontWeight: category === item ? 600 : 400, color: category === item ? "#fff" : C.inkSoft, background: category === item ? C.ink : C.surface, border: `1px solid ${category === item ? C.ink : C.line}`, borderRadius: 20, padding: "6px 13px", cursor: "pointer" }}>
                   {item}
                 </button>
               ))}
             </div>
 
-            {/* Notes Dashboard */}
+            {/* ========== NOTES DASHBOARD ========== */}
             <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 14 }}>
                 <div>
@@ -1433,9 +1031,7 @@ export default function App() {
                     <BookOpen size={20} color={C.ink} />
                     <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 20, color: C.ink }}>My Notes</h2>
                   </div>
-                  <div style={{ marginTop: 4, fontFamily: bodyFont, fontSize: 12, color: C.inkSoft }}>
-                    Save and sync your exam notes with your account.
-                  </div>
+                  <div style={{ marginTop: 4, fontFamily: bodyFont, fontSize: 12, color: C.inkSoft }}>Create, pin, link to exams & export notes.</div>
                 </div>
                 <button
                   onClick={() => {
@@ -1445,22 +1041,11 @@ export default function App() {
                       setNoteTitle("");
                       setNoteContent("");
                       setNoteTags("");
+                      setNoteExamId("");
+                      setNotePinned(false);
                     }
                   }}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    border: "none",
-                    borderRadius: 8,
-                    background: C.ink,
-                    color: "#fff",
-                    padding: "8px 12px",
-                    cursor: "pointer",
-                    fontFamily: bodyFont,
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, border: "none", borderRadius: 8, background: C.ink, color: "#fff", padding: "8px 12px", cursor: "pointer", fontFamily: bodyFont, fontSize: 12, fontWeight: 600 }}
                 >
                   <FileText size={15} />
                   {showNotes ? "Close" : "Open Notes"}
@@ -1477,68 +1062,41 @@ export default function App() {
 
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.bg, border: `1px solid ${C.line}`, borderRadius: 9, padding: "8px 10px", marginBottom: 14 }}>
                     <Search size={15} color={C.inkSoft} />
-                    <input
-                      value={noteSearch}
-                      onChange={(e) => setNoteSearch(e.target.value)}
-                      placeholder="Search your notes..."
-                      style={{ border: "none", outline: "none", background: "transparent", width: "100%", fontFamily: bodyFont, fontSize: 13, color: C.ink }}
-                    />
+                    <input value={noteSearch} onChange={(e) => setNoteSearch(e.target.value)} placeholder="Search notes..." style={{ border: "none", outline: "none", background: "transparent", width: "100%", fontFamily: bodyFont, fontSize: 13, color: C.ink }} />
                   </div>
 
+                  {/* Create / Edit Form */}
                   <div style={{ background: C.softBlue, borderRadius: 10, padding: 14, marginBottom: 16 }}>
                     <div style={{ fontFamily: displayFont, fontSize: 15, fontWeight: 700, color: C.ink, marginBottom: 10 }}>
                       {editingNote ? "Edit Note" : "Create a Note"}
                     </div>
-                    <input
-                      value={noteTitle}
-                      onChange={(e) => setNoteTitle(e.target.value)}
-                      placeholder="Note title"
-                      style={{ width: "100%", padding: "9px 10px", border: `1px solid ${C.line}`, borderRadius: 8, marginBottom: 8, background: "#fff", color: C.ink }}
-                    />
-                    <textarea
-                      value={noteContent}
-                      onChange={(e) => setNoteContent(e.target.value)}
-                      placeholder="Write your notes here..."
-                      rows={5}
-                      style={{ width: "100%", padding: "9px 10px", border: `1px solid ${C.line}`, borderRadius: 8, resize: "vertical", background: "#fff", color: C.ink, fontFamily: bodyFont, marginBottom: 8 }}
-                    />
-                    <input
-                      value={noteTags}
-                      onChange={(e) => setNoteTags(e.target.value)}
-                      placeholder="Tags: GATE, DSA, Maths"
-                      style={{ width: "100%", padding: "9px 10px", border: `1px solid ${C.line}`, borderRadius: 8, marginBottom: 10, background: "#fff", color: C.ink }}
-                    />
+
+                    <input value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} placeholder="Note title" style={{ width: "100%", padding: "9px 10px", border: `1px solid ${C.line}`, borderRadius: 8, marginBottom: 8, background: "#fff", color: C.ink }} />
+
+                    <textarea value={noteContent} onChange={(e) => setNoteContent(e.target.value)} placeholder="Write your notes here... (Markdown supported)" rows={6} style={{ width: "100%", padding: "9px 10px", border: `1px solid ${C.line}`, borderRadius: 8, resize: "vertical", background: "#fff", color: C.ink, fontFamily: bodyFont, marginBottom: 8 }} />
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                      <select value={noteExamId} onChange={(e) => setNoteExamId(e.target.value)} style={{ padding: "9px 10px", border: `1px solid ${C.line}`, borderRadius: 8, background: "#fff", color: C.ink, fontFamily: bodyFont }}>
+                        <option value="">No exam linked</option>
+                        {EXAMS.map((exam) => (
+                          <option key={exam.id} value={exam.id}>{exam.shortName}</option>
+                        ))}
+                      </select>
+                      <input value={noteTags} onChange={(e) => setNoteTags(e.target.value)} placeholder="Tags: GATE, Maths" style={{ padding: "9px 10px", border: `1px solid ${C.line}`, borderRadius: 8, background: "#fff", color: C.ink }} />
+                    </div>
+
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, cursor: "pointer", fontSize: 13, color: C.ink }}>
+                      <input type="checkbox" checked={notePinned} onChange={(e) => setNotePinned(e.target.checked)} style={{ width: 16, height: 16, accentColor: C.ink }} />
+                      Pin this note
+                    </label>
+
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button
-                        onClick={saveNote}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          border: "none",
-                          borderRadius: 8,
-                          background: C.green,
-                          color: "#fff",
-                          padding: "8px 13px",
-                          cursor: "pointer",
-                          fontFamily: bodyFont,
-                          fontSize: 12,
-                          fontWeight: 600,
-                        }}
-                      >
+                      <button onClick={saveNote} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: "none", borderRadius: 8, background: C.green, color: "#fff", padding: "8px 13px", cursor: "pointer", fontFamily: bodyFont, fontSize: 12, fontWeight: 600 }}>
                         <Save size={15} />
                         {editingNote ? "Update Note" : "Save Note"}
                       </button>
                       {editingNote && (
-                        <button
-                          onClick={() => {
-                            setEditingNote(null);
-                            setNoteTitle("");
-                            setNoteContent("");
-                            setNoteTags("");
-                          }}
-                          style={{ border: `1px solid ${C.line}`, borderRadius: 8, background: "#fff", color: C.ink, padding: "8px 13px", cursor: "pointer", fontFamily: bodyFont, fontSize: 12 }}
-                        >
+                        <button onClick={() => { setEditingNote(null); setNoteTitle(""); setNoteContent(""); setNoteTags(""); setNoteExamId(""); setNotePinned(false); }} style={{ border: `1px solid ${C.line}`, borderRadius: 8, background: "#fff", color: C.ink, padding: "8px 13px", cursor: "pointer", fontFamily: bodyFont, fontSize: 12 }}>
                           Cancel
                         </button>
                       )}
@@ -1550,69 +1108,66 @@ export default function App() {
                   </div>
 
                   {notesLoading ? (
-                    <div style={{ textAlign: "center", padding: 25, color: C.inkSoft, fontFamily: bodyFont, fontSize: 13 }}>
-                      Loading your notes...
-                    </div>
+                    <div style={{ textAlign: "center", padding: 25, color: C.inkSoft, fontFamily: bodyFont, fontSize: 13 }}>Loading your notes...</div>
                   ) : filteredNotes.length === 0 ? (
                     <div style={{ textAlign: "center", padding: 25, border: `1px dashed ${C.line}`, borderRadius: 10, color: C.inkSoft, fontFamily: bodyFont, fontSize: 13 }}>
                       <BookOpen size={28} style={{ marginBottom: 8, opacity: 0.5 }} />
                       <div style={{ fontWeight: 600, color: C.ink, marginBottom: 4 }}>No notes yet</div>
-                      <div>Create your first exam note above.</div>
+                      <div>Create your first note above.</div>
                     </div>
                   ) : (
                     <div style={{ display: "grid", gap: 10 }}>
-                      {filteredNotes.map((note) => (
-                        <div key={note.id} style={{ border: `1px solid ${C.line}`, borderRadius: 10, padding: 13, background: "#fff" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                            <div>
-                              <div style={{ fontFamily: displayFont, fontSize: 16, fontWeight: 700, color: C.ink }}>
-                                {note.title || "Untitled Note"}
+                      {filteredNotes.map((note) => {
+                        const linkedExam = EXAMS.find((e) => e.id === note.examId);
+                        return (
+                          <div key={note.id} style={{ border: `1px solid ${C.line}`, borderRadius: 10, padding: 13, background: note.pinned ? C.softYellow : "#fff" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                  {note.pinned && <Pin size={14} color={C.yellow} fill={C.yellow} />}
+                                  <div style={{ fontFamily: displayFont, fontSize: 16, fontWeight: 700, color: C.ink }}>{note.title || "Untitled Note"}</div>
+                                </div>
+                                {linkedExam && <div style={{ fontSize: 11, color: C.blue, fontWeight: 600, marginBottom: 6 }}>{linkedExam.shortName}</div>}
+                                <div style={{ fontFamily: bodyFont, fontSize: 13, lineHeight: 1.6, color: C.inkSoft }}>
+                                  <ReactMarkdown>{note.content || ""}</ReactMarkdown>
+                                </div>
                               </div>
-                              <div style={{ marginTop: 6, fontFamily: bodyFont, fontSize: 13, lineHeight: 1.5, color: C.inkSoft, whiteSpace: "pre-wrap" }}>
-                                {note.content}
+                              <div style={{ display: "flex", flexDirection: "column", gap: 5, flexShrink: 0 }}>
+                                <button onClick={() => startEditingNote(note)} style={{ border: `1px solid ${C.line}`, background: C.bg, borderRadius: 7, padding: "6px 8px", cursor: "pointer", color: C.ink, fontSize: 12 }}>Edit</button>
+                                <button onClick={() => deleteNote(note.id)} style={{ border: "none", background: C.softRed, borderRadius: 7, padding: "6px 8px", cursor: "pointer", color: C.red, fontSize: 12 }}>Delete</button>
                               </div>
                             </div>
-                            <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
-                              <button
-                                onClick={() => startEditingNote(note)}
-                                style={{ border: `1px solid ${C.line}`, background: C.bg, borderRadius: 7, padding: "6px 8px", cursor: "pointer", color: C.ink }}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => deleteNote(note.id)}
-                                style={{ border: "none", background: C.softRed, borderRadius: 7, padding: "6px 8px", cursor: "pointer", color: C.red }}
-                              >
-                                Delete
-                              </button>
+
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, flexWrap: "wrap", gap: 8 }}>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                                {Array.isArray(note.tags) && note.tags.map((tag) => (
+                                  <span key={tag} style={{ background: C.softYellow, color: C.ink, borderRadius: 20, padding: "3px 8px", fontFamily: monoFont, fontSize: 9 }}>#{tag}</span>
+                                ))}
+                              </div>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button onClick={() => exportNoteAsTxt(note)} style={{ display: "inline-flex", alignItems: "center", gap: 4, border: `1px solid ${C.line}`, background: "#fff", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 11, color: C.ink }}>
+                                  <Download size={12} /> TXT
+                                </button>
+                                <button onClick={() => exportNoteAsPdf(note)} style={{ display: "inline-flex", alignItems: "center", gap: 4, border: `1px solid ${C.line}`, background: "#fff", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 11, color: C.ink }}>
+                                  <FileDown size={12} /> PDF
+                                </button>
+                              </div>
                             </div>
                           </div>
-                          {Array.isArray(note.tags) && note.tags.length > 0 && (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
-                              {note.tags.map((tag) => (
-                                <span key={tag} style={{ background: C.softYellow, color: C.ink, borderRadius: 20, padding: "4px 8px", fontFamily: monoFont, fontSize: 9 }}>
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </>
               )}
             </div>
 
-            {/* Cloud Files */}
             <CloudFiles user={user} />
 
-            {/* Results count */}
             <div style={{ fontFamily: monoFont, fontSize: 10.5, color: C.inkSoft, marginBottom: 10, textTransform: "uppercase" }}>
               {filtered.length} {filtered.length === 1 ? "exam" : "exams"} found
             </div>
 
-            {/* Exam cards */}
             {filtered.length === 0 ? (
               <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 12, fontFamily: bodyFont, fontSize: 13.5, color: C.inkSoft, textAlign: "center", padding: "40px 20px" }}>
                 <Search size={30} style={{ marginBottom: 10, opacity: 0.45 }} />
@@ -1622,16 +1177,7 @@ export default function App() {
             ) : (
               <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(min(260px, 100%), 1fr))" }}>
                 {filtered.map((exam) => (
-                  <ExamCard
-                    key={exam.id}
-                    exam={exam}
-                    starred={starred.has(exam.id)}
-                    onToggleStar={toggleStar}
-                    onOpen={(id) => {
-                      setSelectedId(id);
-                      setView("detail");
-                    }}
-                  />
+                  <ExamCard key={exam.id} exam={exam} starred={starred.has(exam.id)} onToggleStar={toggleStar} onOpen={(id) => { setSelectedId(id); setView("detail"); }} />
                 ))}
               </div>
             )}
