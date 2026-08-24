@@ -7,6 +7,8 @@ import "react-calendar/dist/Calendar.css";
 import Auth from "./Auth";
 import PracticeTestSection from "./PracticeTest";
 
+import CloudFiles from "./CloudFiles";
+
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
 import { auth, db } from "./firebase";
@@ -1564,6 +1566,7 @@ function ExamDetail({
 
         <div style={{ padding: "0 20px 20px" }}>
           <PracticeTestSection exam={exam} user={user} />
+          <CloudFiles user={user} examId={exam.id} />
         </div>
       </div>
     </div>
