@@ -37,10 +37,10 @@ const displayFont = "'Space Grotesk', sans-serif";
 const bodyFont = "'IBM Plex Sans', sans-serif";
 const monoFont = "'IBM Plex Mono', monospace";
 
-/* ---- Exam patterns (time + marks + negative) ---- */
+/* ---- Real full-length patterns (approx official structure) ---- */
 const EXAM_PATTERNS = {
   "ssc-cgl": {
-    label: "SSC CGL Tier-I style",
+    label: "SSC CGL Tier-I (full length)",
     totalTimeMin: 60,
     negativeMark: 0.5,
     sections: [
@@ -51,61 +51,63 @@ const EXAM_PATTERNS = {
     ],
   },
   cat: {
-    label: "CAT style (short mock)",
-    totalTimeMin: 40,
+    label: "CAT (full-length practice)",
+    totalTimeMin: 120,
     negativeMark: 1,
     sections: [
-      { id: "varc", name: "VARC", qCount: 8, marksEach: 3 },
-      { id: "dilr", name: "DILR", qCount: 8, marksEach: 3 },
-      { id: "quant", name: "Quantitative Aptitude", qCount: 8, marksEach: 3 },
+      { id: "varc", name: "VARC", qCount: 22, marksEach: 3 },
+      { id: "dilr", name: "DILR", qCount: 20, marksEach: 3 },
+      { id: "quant", name: "Quantitative Aptitude", qCount: 22, marksEach: 3 },
     ],
   },
   "jee-main": {
-    label: "JEE Main style (short mock)",
-    totalTimeMin: 45,
+    label: "JEE Main (full length)",
+    totalTimeMin: 180,
     negativeMark: 1,
     sections: [
-      { id: "physics", name: "Physics", qCount: 10, marksEach: 4 },
-      { id: "chemistry", name: "Chemistry", qCount: 10, marksEach: 4 },
-      { id: "maths", name: "Mathematics", qCount: 10, marksEach: 4 },
+      { id: "physics", name: "Physics", qCount: 30, marksEach: 4 },
+      { id: "chemistry", name: "Chemistry", qCount: 30, marksEach: 4 },
+      { id: "maths", name: "Mathematics", qCount: 30, marksEach: 4 },
     ],
   },
   "neet-ug": {
-    label: "NEET UG style (short mock)",
-    totalTimeMin: 45,
+    label: "NEET UG (full length)",
+    totalTimeMin: 200,
     negativeMark: 1,
     sections: [
-      { id: "physics", name: "Physics", qCount: 10, marksEach: 4 },
-      { id: "chemistry", name: "Chemistry", qCount: 10, marksEach: 4 },
-      { id: "biology", name: "Biology", qCount: 15, marksEach: 4 },
+      { id: "physics", name: "Physics", qCount: 45, marksEach: 4 },
+      { id: "chemistry", name: "Chemistry", qCount: 45, marksEach: 4 },
+      { id: "biology", name: "Biology", qCount: 90, marksEach: 4 },
     ],
   },
   "upsc-cse": {
-    label: "UPSC CSE Prelims GS style",
-    totalTimeMin: 30,
+    label: "UPSC CSE Prelims GS (full length)",
+    totalTimeMin: 120,
     negativeMark: 0.66,
-    sections: [{ id: "gs", name: "General Studies", qCount: 20, marksEach: 2 }],
+    sections: [{ id: "gs", name: "General Studies", qCount: 100, marksEach: 2 }],
   },
   gate: {
-    label: "GATE style (short mock)",
-    totalTimeMin: 40,
+    label: "GATE (full length)",
+    totalTimeMin: 180,
     negativeMark: 0.33,
     sections: [
       { id: "ga", name: "General Aptitude", qCount: 10, marksEach: 1 },
-      { id: "core", name: "Core", qCount: 15, marksEach: 2 },
+      { id: "core", name: "Core", qCount: 55, marksEach: 2 },
     ],
   },
   "ibps-po": {
-    label: "IBPS PO Prelims style",
+    label: "IBPS PO Prelims (full length)",
     totalTimeMin: 60,
     negativeMark: 0.25,
     sections: [
-      { id: "english", name: "English Language", qCount: 15, marksEach: 1 },
-      { id: "quant", name: "Quantitative Aptitude", qCount: 15, marksEach: 1 },
-      { id: "reasoning", name: "Reasoning Ability", qCount: 15, marksEach: 1 },
+      { id: "english", name: "English Language", qCount: 30, marksEach: 1 },
+      { id: "quant", name: "Quantitative Aptitude", qCount: 35, marksEach: 1 },
+      { id: "reasoning", name: "Reasoning Ability", qCount: 35, marksEach: 1 },
     ],
   },
 };
+
+const YEAR_OPTIONS = [2025, 2024, 2023, 2022, 2021, "all"];
 
 function q(id, section, year, text, options, correctIndex, explanation) {
   return { id, section, year, text, options, correctIndex, explanation };
@@ -551,51 +553,96 @@ const BANK = {
   ],
 
   gate: [
-    q("ga1", "ga", 2025, "Similar to Candid?", ["Secretive", "Frank", "Rude", "Silent"], 1, "Frank."),
-    q("ga2", "ga", 2024, "5 workers 12 days; 6 workers take?", ["10", "8", "9", "14"], 0, "10."),
-    q("ga3", "ga", 2023, "2,6,12,20,30,?", ["42", "40", "36", "44"], 0, "42."),
-    q("ga4", "ga", 2022, "Avg of 5 nums=20; replace 30 by 10. New avg?", ["16", "18", "15", "17"], 0, "16."),
-    q("ga5", "ga", 2021, "P(ace) from 52 cards?", ["1/13", "1/4", "4/13", "1/52"], 0, "1/13."),
-    q("ga6", "ga", 2025, "Opposite of Scarce?", ["Rare", "Abundant", "Little", "Sparse"], 1, "Abundant."),
-    q("ga7", "ga", 2024, "25% of 25% of 400?", ["25", "50", "100", "20"], 0, "25."),
-    q("ga8", "ga", 2023, "x:y=2:3, y:z=4:5 ⇒ x:z?", ["8:15", "2:5", "4:5", "8:9"], 0, "8:15."),
-    q("ga9", "ga", 2022, "150 m train crosses pole in 10 s. Speed?", ["54 km/h", "15", "36", "72"], 0, "54."),
-    q("ga10", "ga", 2021, "log2 8=?", ["2", "3", "4", "8"], 1, "3."),
-    q("ga11", "ga", 2025, "Synonym of Diligent?", ["Lazy", "Hardworking", "Careless", "Slow"], 1, "Hardworking."),
-    q("ga12", "ga", 2024, "If 15% of a number is 45, the number is?", ["300", "250", "350", "200"], 0, "300."),
-    q("ga13", "ga", 2023, "Series: 5, 10, 20, 40, ?", ["60", "80", "70", "100"], 1, "80."),
-    q("ga14", "ga", 2022, "Average of 4, 8, 12, 16?", ["10", "8", "12", "14"], 0, "10."),
-    q("ga15", "ga", 2021, "Probability of getting head on a fair coin?", ["0", "0.5", "1", "0.25"], 1, "0.5."),
-    q("ga16", "ga", 2025, "Antonym of Transparent?", ["Clear", "Opaque", "Bright", "Visible"], 1, "Opaque."),
-    q("ga17", "ga", 2024, "LCM of 4 and 6?", ["12", "24", "8", "10"], 0, "12."),
-    q("ga18", "ga", 2023, "If a:b = 3:4 and b:c = 2:5, a:c =?", ["3:10", "6:20", "3:5", "2:5"], 0, "3:10."),
-    q("ga19", "ga", 2022, "Speed 72 km/h in m/s?", ["20", "18", "25", "15"], 0, "20."),
-    q("ga20", "ga", 2021, "log10 100 =?", ["1", "2", "10", "100"], 1, "2."),
-    q("co1", "core", 2025, "Binary search complexity?", ["O(n)", "O(log n)", "O(n²)", "O(1)"], 1, "O(log n)."),
-    q("co2", "core", 2024, "LIFO structure?", ["Queue", "Stack", "Tree", "Graph"], 1, "Stack."),
-    q("co3", "core", 2023, "Deadlock Coffman conditions?", ["2", "3", "4", "5"], 2, "4."),
-    q("co4", "core", 2022, "HTTP 404 means?", ["OK", "Not Found", "Server error", "Redirect"], 1, "Not Found."),
-    q("co5", "core", 2021, "Primary key must be?", ["Nullable", "Unique & not null", "Numeric only", "Always composite"], 1, "Unique not null."),
-    q("co6", "core", 2025, "TCP is?", ["Connectionless", "Connection-oriented", "Unreliable only", "App layer only"], 1, "Connection-oriented."),
-    q("co7", "core", 2024, "Max edges simple undirected n vertices?", ["n", "n(n-1)/2", "n²", "2n"], 1, "n(n-1)/2."),
-    q("co8", "core", 2023, "Replace least recently used page?", ["FIFO", "LRU", "Optimal only", "Random"], 1, "LRU."),
-    q("co9", "core", 2022, "ACID 'I' means?", ["Index", "Isolation", "Integrity only", "Instance"], 1, "Isolation."),
-    q("co10", "core", 2021, "Grammar-checking compiler phase?", ["Lexical", "Syntax analysis", "Code gen", "Linking"], 1, "Syntax."),
-    q("co11", "core", 2025, "Nested i=1..n, j=1..i complexity?", ["O(n)", "O(n²)", "O(n log n)", "O(1)"], 1, "O(n²)."),
-    q("co12", "core", 2024, "Not a programming paradigm name?", ["OOP", "Functional", "Relational algebra only", "Procedural"], 2, "Query model."),
-    q("co13", "core", 2023, "192.168.0.1 is typically?", ["Public", "Private", "Multicast", "Loopback"], 1, "Private."),
-    q("co14", "core", 2022, "Semaphore used for?", ["Deadlock only", "Synchronisation", "Compilation", "GUI"], 1, "Sync."),
-    q("co15", "core", 2021, "Removes transitive dependency?", ["1NF", "2NF", "3NF", "BCNF only"], 2, "3NF."),
-    q("co16", "core", 2025, "Time complexity of merge sort?", ["O(n)", "O(n log n)", "O(n²)", "O(log n)"], 1, "O(n log n)."),
-    q("co17", "core", 2024, "Which data structure uses FIFO?", ["Stack", "Queue", "Tree", "Heap"], 1, "Queue."),
-    q("co18", "core", 2023, "In OS, thrashing is related to?", ["CPU scheduling", "Excessive paging", "Deadlock", "File system"], 1, "Excessive paging."),
-    q("co19", "core", 2022, "HTTP status 200 means?", ["OK", "Not Found", "Redirect", "Server Error"], 0, "OK."),
-    q("co20", "core", 2021, "Foreign key is used for?", ["Uniqueness", "Referential integrity", "Indexing only", "Sorting"], 1, "Referential integrity."),
-    q("co21", "core", 2025, "Dijkstra algorithm finds?", ["Minimum spanning tree", "Shortest path", "Maximum flow", "Topological order"], 1, "Shortest path."),
-    q("co22", "core", 2024, "Which is not a layer in OSI model?", ["Physical", "Network", "Session", "Encryption"], 3, "Encryption is not a layer."),
-    q("co23", "core", 2023, "In DBMS, 2NF removes?", ["Partial dependency", "Transitive dependency", "Multivalued", "All"], 0, "Partial."),
-    q("co24", "core", 2022, "Process that has finished but entry remains is?", ["Zombie", "Orphan", "Daemon", "Thread"], 0, "Zombie."),
-    q("co25", "core", 2021, "Compiler converts?", ["High-level to machine", "Machine to high-level", "Only assembly", "Only object code"], 0, "High-level to machine/assembly."),
+    q("ga1", "ga", 2025, "Similar to Candid?", ["Secretive", "Frank", "Rude", "Silent"], 1, "Candid means open and honest. Frank is the closest synonym; secretive is the opposite."),
+    q("ga2", "ga", 2024, "5 workers 12 days; 6 workers take?", ["10", "8", "9", "14"], 0, "Work is constant: 5 workers x 12 days = 60 worker-days. With 6 workers: 60/6 = 10 days."),
+    q("ga3", "ga", 2023, "2,6,12,20,30,?", ["42", "40", "36", "44"], 0, "Differences increase by 2 each time: +4, +6, +8, +10, +12 so 30+12 = 42."),
+    q("ga4", "ga", 2022, "Avg of 5 nums=20; replace 30 by 10. New avg?", ["16", "18", "15", "17"], 0, "Sum was 5x20 = 100. Replace 30 by 10: new sum = 80. New average = 80/5 = 16."),
+    q("ga5", "ga", 2021, "P(ace) from 52 cards?", ["1/13", "1/4", "4/13", "1/52"], 0, "There are 4 aces in 52 cards, so probability = 4/52 = 1/13."),
+    q("ga6", "ga", 2025, "Opposite of Scarce?", ["Rare", "Abundant", "Little", "Sparse"], 1, "Scarce means rare or in short supply. The opposite is abundant (plentiful)."),
+    q("ga7", "ga", 2024, "25% of 25% of 400?", ["25", "50", "100", "20"], 0, "25% of 400 = 100; 25% of 100 = 25."),
+    q("ga8", "ga", 2023, "x:y=2:3, y:z=4:5 ⇒ x:z?", ["8:15", "2:5", "4:5", "8:9"], 0, "x:y = 2:3 and y:z = 4:5. Make y common (12): x:y = 8:12, y:z = 12:15, so x:z = 8:15."),
+    q("ga9", "ga", 2022, "150 m train crosses pole in 10 s. Speed?", ["54 km/h", "15", "36", "72"], 0, "Speed = distance/time = 150 m / 10 s = 15 m/s = 15 x 18/5 = 54 km/h."),
+    q("ga10", "ga", 2021, "log2 8=?", ["2", "3", "4", "8"], 1, "2^3 = 8, so log base 2 of 8 equals 3."),
+    q("ga11", "ga", 2025, "Synonym of Diligent?", ["Lazy", "Hardworking", "Careless", "Slow"], 1, "Diligent means hardworking and careful. Lazy and careless are antonyms."),
+    q("ga12", "ga", 2024, "If 15% of a number is 45, the number is?", ["300", "250", "350", "200"], 0, "15% of x = 45 implies x = 45 x 100/15 = 300."),
+    q("ga13", "ga", 2023, "Series: 5, 10, 20, 40, ?", ["60", "80", "70", "100"], 1, "Each term doubles: 5, 10, 20, 40, 80."),
+    q("ga14", "ga", 2022, "Average of 4, 8, 12, 16?", ["10", "8", "12", "14"], 0, "Sum = 4+8+12+16 = 40; average = 40/4 = 10."),
+    q("ga15", "ga", 2021, "Probability of getting head on a fair coin?", ["0", "0.5", "1", "0.25"], 1, "A fair coin has two equally likely outcomes; P(Head) = 1/2 = 0.5."),
+    q("ga16", "ga", 2025, "Antonym of Transparent?", ["Clear", "Opaque", "Bright", "Visible"], 1, "Transparent means see-through; opaque means not allowing light through."),
+    q("ga17", "ga", 2024, "LCM of 4 and 6?", ["12", "24", "8", "10"], 0, "LCM of 4 and 6: multiples 4,8,12... and 6,12... so LCM = 12."),
+    q("ga18", "ga", 2023, "If a:b = 3:4 and b:c = 2:5, a:c =?", ["3:10", "6:20", "3:5", "2:5"], 0, "a:b = 3:4, b:c = 2:5. With b common 4: a:b = 3:4, b:c = 4:10, so a:c = 3:10."),
+    q("ga19", "ga", 2022, "Speed 72 km/h in m/s?", ["20", "18", "25", "15"], 0, "72 km/h = 72 x (5/18) = 20 m/s."),
+    q("ga20", "ga", 2021, "log10 100 =?", ["1", "2", "10", "100"], 1, "10^2 = 100, so log base 10 of 100 equals 2."),
+    q("co1", "core", 2025, "Binary search complexity?", ["O(n)", "O(log n)", "O(n²)", "O(1)"], 1, "Binary search halves the search space each step on a sorted array, giving O(log n) time."),
+    q("co2", "core", 2024, "LIFO structure?", ["Queue", "Stack", "Tree", "Graph"], 1, "Stack follows Last-In-First-Out (LIFO): the last pushed item is popped first."),
+    q("co3", "core", 2023, "Deadlock Coffman conditions?", ["2", "3", "4", "5"], 2, "Coffman four conditions for deadlock: mutual exclusion, hold-and-wait, no preemption, circular wait."),
+    q("co4", "core", 2022, "HTTP 404 means?", ["OK", "Not Found", "Server error", "Redirect"], 1, "HTTP 404 means the requested resource was not found on the server."),
+    q("co5", "core", 2021, "Primary key must be?", ["Nullable", "Unique & not null", "Numeric only", "Always composite"], 1, "A primary key uniquely identifies each row and cannot be NULL."),
+    q("co6", "core", 2025, "TCP is?", ["Connectionless", "Connection-oriented", "Unreliable only", "App layer only"], 1, "TCP is connection-oriented: it establishes a session and provides reliable delivery."),
+    q("co7", "core", 2024, "Max edges simple undirected n vertices?", ["n", "n(n-1)/2", "n²", "2n"], 1, "A simple undirected graph on n vertices has at most n(n-1)/2 edges."),
+    q("co8", "core", 2023, "Replace least recently used page?", ["FIFO", "LRU", "Optimal only", "Random"], 1, "LRU (Least Recently Used) replaces the page that has not been used for the longest time."),
+    q("co9", "core", 2022, "ACID 'I' means?", ["Index", "Isolation", "Integrity only", "Instance"], 1, "In ACID, Isolation means concurrent transactions do not interfere with each other."),
+    q("co10", "core", 2021, "Grammar-checking compiler phase?", ["Lexical", "Syntax analysis", "Code gen", "Linking"], 1, "Syntax analysis (parsing) checks grammar and builds the parse tree."),
+    q("co11", "core", 2025, "Nested i=1..n, j=1..i complexity?", ["O(n)", "O(n²)", "O(n log n)", "O(1)"], 1, "Nested loops i=1..n, j=1..i run about n(n+1)/2 times, which is O(n^2)."),
+    q("co12", "core", 2024, "Not a programming paradigm name?", ["OOP", "Functional", "Relational algebra only", "Procedural"], 2, "Relational algebra is a query model, not a general programming paradigm like OOP or functional."),
+    q("co13", "core", 2023, "192.168.0.1 is typically?", ["Public", "Private", "Multicast", "Loopback"], 1, "192.168.0.0/16 is a private IPv4 range (RFC 1918), not publicly routable."),
+    q("co14", "core", 2022, "Semaphore used for?", ["Deadlock only", "Synchronisation", "Compilation", "GUI"], 1, "Semaphores are synchronization primitives used to control access to shared resources."),
+    q("co15", "core", 2021, "Removes transitive dependency?", ["1NF", "2NF", "3NF", "BCNF only"], 2, "3NF removes transitive dependencies of non-key attributes on the primary key."),
+    q("co16", "core", 2025, "Time complexity of merge sort?", ["O(n)", "O(n log n)", "O(n²)", "O(log n)"], 1, "Merge sort divides and merges in O(log n) levels, each O(n) work, total O(n log n)."),
+    q("co17", "core", 2024, "Which data structure uses FIFO?", ["Stack", "Queue", "Tree", "Heap"], 1, "Queue is FIFO: the first enqueued element is dequeued first."),
+    q("co18", "core", 2023, "In OS, thrashing is related to?", ["CPU scheduling", "Excessive paging", "Deadlock", "File system"], 1, "Thrashing is excessive paging when the working set does not fit in memory."),
+    q("co19", "core", 2022, "HTTP status 200 means?", ["OK", "Not Found", "Redirect", "Server Error"], 0, "HTTP 200 means the request succeeded (OK)."),
+    q("co20", "core", 2021, "Foreign key is used for?", ["Uniqueness", "Referential integrity", "Indexing only", "Sorting"], 1, "A foreign key enforces referential integrity between related tables."),
+    q("co21", "core", 2025, "Dijkstra algorithm finds?", ["Minimum spanning tree", "Shortest path", "Maximum flow", "Topological order"], 1, "Dijkstra finds single-source shortest paths in graphs with non-negative edge weights."),
+    q("co22", "core", 2024, "Which is not a layer in OSI model?", ["Physical", "Network", "Session", "Encryption"], 3, "OSI has seven layers; Encryption is a service, not an OSI layer name."),
+    q("co23", "core", 2023, "In DBMS, 2NF removes?", ["Partial dependency", "Transitive dependency", "Multivalued", "All"], 0, "2NF eliminates partial dependency of non-key attributes on part of a composite key."),
+    q("co24", "core", 2022, "Process that has finished but entry remains is?", ["Zombie", "Orphan", "Daemon", "Thread"], 0, "A zombie process has finished but still has an entry in the process table until the parent reaps it."),
+    q("co25", "core", 2021, "Compiler converts?", ["High-level to machine", "Machine to high-level", "Only assembly", "Only object code"], 0, "A compiler translates high-level source code into machine code or intermediate form."),
+    q("co26", "core", 2025, "BFS uses which data structure?", ["Stack", "Queue", "Heap", "Hash only"], 1, "BFS explores level by level and is implemented with a queue."),
+    q("co27", "core", 2024, "Worst case of quicksort?", ["O(n log n)", "O(n²)", "O(n)", "O(log n)"], 1, "Quicksort worst case is O(n^2) when pivots are always the smallest or largest element."),
+    q("co28", "core", 2023, "Virtual memory is managed by?", ["Compiler", "OS", "Assembler", "Linker only"], 1, "The operating system manages virtual memory (paging and segmentation)."),
+    q("co29", "core", 2022, "IPv4 address size?", ["32 bit", "64 bit", "128 bit", "16 bit"], 0, "IPv4 addresses are 32 bits long (for example 192.168.1.1)."),
+    q("co30", "core", 2021, "SQL JOIN combines?", ["Rows from tables", "Only columns", "Indexes only", "Triggers"], 0, "JOIN combines rows from two or more tables based on a related column."),
+    q("co31", "core", 2025, "Hash table average search?", ["O(1)", "O(n)", "O(log n)", "O(n²)"], 0, "With a good hash function and load factor, average search in a hash table is O(1)."),
+    q("co32", "core", 2024, "Pipelining improves?", ["Latency only", "Throughput", "Disk size", "Cache miss only"], 1, "Pipelining overlaps instruction stages to increase throughput (instructions per time)."),
+    q("co33", "core", 2023, "RAID mainly provides?", ["Faster CPU", "Redundancy / performance for storage", "More RAM", "Compiler speed"], 1, "RAID combines disks for redundancy and/or higher performance."),
+    q("co34", "core", 2022, "Mutex is used for?", ["Networking", "Mutual exclusion", "Parsing", "Sorting"], 1, "A mutex ensures mutual exclusion so only one thread holds a critical section at a time."),
+    q("co35", "core", 2021, "Normalization reduces?", ["Redundancy", "Speed always", "Indexes", "Transactions"], 0, "Database normalization reduces data redundancy and update anomalies."),
+    q("co36", "core", 2025, "DFS is typically implemented with?", ["Queue", "Stack / recursion", "Array only", "Heap only"], 1, "DFS goes deep first and is implemented with an explicit stack or recursion."),
+    q("co37", "core", 2024, "Page fault occurs when?", ["Page in memory", "Page not in memory", "CPU idle", "Disk full only"], 1, "A page fault occurs when the CPU references a page that is not currently in RAM."),
+    q("co38", "core", 2023, "TCP port for HTTP typically?", ["21", "22", "80", "25"], 2, "Default HTTP port is 80; HTTPS uses 443."),
+    q("co39", "core", 2022, "Big-O of inserting at head of linked list?", ["O(1)", "O(n)", "O(log n)", "O(n²)"], 0, "Inserting at the head of a singly linked list updates a few pointers, which is O(1)."),
+    q("co40", "core", 2021, "ACID 'A' stands for?", ["Atomicity", "Availability", "Array", "Access"], 0, "Atomicity means a transaction runs fully or not at all (all-or-nothing)."),
+    q("co41", "core", 2025, "Kruskal algorithm builds?", ["Shortest path", "MST", "Max flow", "Topological order"], 1, "Kruskal algorithm builds a minimum spanning tree by adding lightest edges without cycles."),
+    q("co42", "core", 2024, "Context switch is done by?", ["User program", "OS scheduler", "Compiler", "Assembler"], 1, "The OS scheduler saves and restores context when switching processes or threads."),
+    q("co43", "core", 2023, "CDN primarily helps with?", ["Local disk", "Content delivery latency", "CPU scheduling", "DB normalization"], 1, "A CDN caches content near users to reduce latency and origin load."),
+    q("co44", "core", 2022, "Inorder of BST gives?", ["Random", "Sorted order", "Reverse only", "Level order"], 1, "Inorder traversal of a binary search tree visits keys in sorted order."),
+    q("co45", "core", 2021, "Thrashing is caused by?", ["Too much CPU", "Excessive paging", "Fast disk", "No processes"], 1, "Thrashing happens when memory is overcommitted and the system spends most time paging."),
+    q("co46", "core", 2025, "UDP is?", ["Connection-oriented", "Connectionless", "Always reliable", "App layer only"], 1, "UDP is connectionless and does not guarantee delivery or order."),
+    q("co47", "core", 2024, "Space complexity of merge sort?", ["O(1)", "O(n)", "O(log n)", "O(n²)"], 1, "Merge sort needs an auxiliary array of size O(n) for merging."),
+    q("co48", "core", 2023, "Foreign key references?", ["Primary key of another table", "Any column", "Index only", "View only"], 0, "A foreign key typically references a primary key (or unique key) in another table."),
+    q("co49", "core", 2022, "Round-robin is a?", ["Scheduling algorithm", "Sorting method", "Network protocol", "DB index"], 0, "Round-robin gives each ready process a fixed time quantum in cyclic order."),
+    q("co50", "core", 2021, "NP-complete problems are?", ["Solved in P always", "Hard; in NP and NP-hard", "Only undecidable", "Always O(1)"], 1, "NP-complete problems are in NP and NP-hard; no known polynomial algorithm solves all of them."),
+    q("co51", "core", 2025, "Cache hit means?", ["Data found in cache", "Data on disk only", "Page fault", "Miss always"], 0, "A cache hit means the requested data was found in the cache."),
+    q("co52", "core", 2024, "Bellman-Ford handles?", ["Only positive weights", "Negative weights (no neg cycle)", "Only undirected", "Only BFS"], 1, "Bellman-Ford computes shortest paths and can handle negative edge weights (but not negative cycles)."),
+    q("co53", "core", 2023, "SSL/TLS works mainly at?", ["Physical", "Transport / session security", "Data link only", "Application ignoring transport"], 1, "SSL/TLS provides encryption and authentication for data in transit (transport security)."),
+    q("co54", "core", 2022, "Heap is used for?", ["Priority queue", "FIFO only", "Graph BFS only", "String match only"], 0, "A binary heap efficiently supports priority-queue operations (insert, extract-min/max)."),
+    q("co55", "core", 2021, "2's complement of 5 in 4-bit?", ["1011", "0101", "1101", "0011"], 0, "In 4-bit form, 5 is 0101; invert gives 1010; add 1 gives 1011 (two's complement of 5)."),
+    q("co56", "core", 2025, "Lexical analysis produces?", ["Parse tree", "Tokens", "Machine code", "Object files"], 1, "Lexical analysis splits source code into tokens (identifiers, keywords, operators, etc.)."),
+    q("co57", "core", 2024, "CSMA/CD is associated with?", ["Wi-Fi only", "Ethernet collision handling", "IP routing", "DNS"], 1, "CSMA/CD was used on classic shared Ethernet to detect and recover from collisions."),
+    q("co58", "core", 2023, "B+ tree is common in?", ["CPU registers", "Database indexes", "GPU cores", "Assemblers only"], 1, "B+ trees are widely used for database indexes because of balanced height and efficient range scans."),
+    q("co59", "core", 2022, "Starvation can occur in?", ["FCFS never", "Priority scheduling", "Only RR", "Only SJF optimal"], 1, "In priority scheduling, a low-priority process may starve if higher-priority work keeps arriving."),
+    q("co60", "core", 2021, "IPv6 address size?", ["32 bit", "64 bit", "128 bit", "256 bit"], 2, "IPv6 addresses are 128 bits long."),
+    q("ga21", "ga", 2025, "If 12 workers build a wall in 10 days, 15 workers take?", ["8", "6", "12", "9"], 0, "12 x 10 = 120 worker-days; 120/15 = 8 days."),
+    q("ga22", "ga", 2024, "Synonym of Lucid?", ["Clear", "Dark", "Vague", "Loud"], 0, "Lucid means clear and easy to understand."),
+    q("ga23", "ga", 2023, "Series 3, 9, 27, 81, ?", ["243", "162", "108", "324"], 0, "Geometric sequence with ratio 3: 3, 9, 27, 81, 243."),
+    q("ga24", "ga", 2022, "P(drawing heart from 52)?", ["1/4", "1/13", "1/2", "4/13"], 0, "13 hearts in 52 cards gives 13/52 = 1/4."),
+    q("ga25", "ga", 2021, "log5 125 =?", ["2", "3", "4", "5"], 1, "5^3 = 125, so log base 5 of 125 equals 3."),
+    q("ga26", "ga", 2025, "Antonym of Expand?", ["Contract", "Enlarge", "Grow", "Inflate"], 0, "Expand means grow larger; contract means shrink."),
+    q("ga27", "ga", 2024, "20% of 350?", ["70", "60", "80", "50"], 0, "20% of 350 = 0.2 x 350 = 70."),
+    q("ga28", "ga", 2023, "a:b=1:2, b:c=3:4 ⇒ a:c?", ["3:8", "1:4", "3:4", "2:3"], 0, "a:b = 1:2, b:c = 3:4. With b common 6: a:b = 3:6, b:c = 6:8, so a:c = 3:8."),
+    q("ga29", "ga", 2022, "90 km/h in m/s?", ["25", "30", "20", "15"], 0, "90 km/h = 90 x 5/18 = 25 m/s."),
+    q("ga30", "ga", 2021, "Mean of 2,4,6,8,10?", ["6", "5", "7", "8"], 0, "Sum = 30; mean = 30/5 = 6."),
   ],
 
   "ibps-po": [
@@ -677,20 +724,39 @@ const BANK = {
   ],
 };
 
-function buildPaper(examId) {
+function shuffleArr(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/** Build a full-length paper. Prefer questions tagged with selected year, then fill from other years. */
+function buildPaper(examId, year = "all") {
   const pattern = EXAM_PATTERNS[examId] || EXAM_PATTERNS["ssc-cgl"];
   const bank = BANK[examId] || BANK["ssc-cgl"];
   const questions = [];
+  const yearNum = year === "all" ? null : Number(year);
+
   pattern.sections.forEach((sec) => {
-    const pool = bank.filter((x) => x.section === sec.id);
-    // Fisher-Yates shuffle for better randomness
-    const shuffled = [...pool];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
+    const sectionPool = bank.filter((x) => x.section === sec.id);
+    let preferred = yearNum
+      ? sectionPool.filter((x) => x.year === yearNum)
+      : sectionPool;
+    let rest = yearNum
+      ? sectionPool.filter((x) => x.year !== yearNum)
+      : [];
+
+    preferred = shuffleArr(preferred);
+    rest = shuffleArr(rest);
+    // Prefer year-tagged, then others; recycle if still short
+    const ordered = [...preferred, ...rest];
+    if (ordered.length === 0 && sectionPool.length) ordered.push(...shuffleArr(sectionPool));
+
     for (let i = 0; i < sec.qCount; i++) {
-      const item = shuffled[i % Math.max(shuffled.length, 1)] || pool[0];
+      const item = ordered[i % Math.max(ordered.length, 1)] || sectionPool[0];
       if (!item) continue;
       questions.push({
         ...item,
@@ -702,7 +768,17 @@ function buildPaper(examId) {
       });
     }
   });
-  return { pattern, questions };
+
+  return {
+    pattern: {
+      ...pattern,
+      label: yearNum
+        ? `${pattern.label} · ${yearNum}-style`
+        : pattern.label,
+    },
+    questions,
+    year: yearNum || "all",
+  };
 }
 
 /** Countdown timer — calls onExpire at 0 */
@@ -1062,8 +1138,30 @@ function ResultsView({ exam, pattern, questions, answers, flagged, timeTakenSec,
                   })}
                 </div>
                 {qu.explanation && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: C.inkSoft, fontStyle: "italic" }}>
-                    {qu.explanation}
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: "10px 12px",
+                      background: C.softBlue,
+                      borderRadius: 8,
+                      borderLeft: `3px solid ${C.blue}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: monoFont,
+                        fontSize: 10,
+                        color: C.blue,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.4,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Explanation
+                    </div>
+                    <div style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.ink, lineHeight: 1.55 }}>
+                      {qu.explanation}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1129,6 +1227,9 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
   }, [answers, flagged, onSubmit, totalSec]);
 
   const { display, left } = useTimer(totalSec, running, submit);
+  const timePct = totalSec > 0 ? Math.max(0, Math.min(100, (left / totalSec) * 100)) : 0;
+  const timerColor = left < 60 ? "#f0a0a0" : left < 300 ? "#f5d76e" : "#8fdfb0";
+  const barColor = left < 60 ? C.red : left < 300 ? C.yellow : C.green;
 
   const qu = questions[idx];
   const answeredCount = Object.keys(answers).filter((k) => answers[k] != null).length;
@@ -1136,59 +1237,98 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, overflow: "hidden" }}>
-      {/* TIMER BAR */}
+      {/* TIMER BAR + countdown progress */}
       <div
         style={{
-          padding: "12px 16px",
+          padding: "12px 16px 0",
           background: C.ink,
           color: "#fff",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 10,
         }}
       >
-        <div>
-          <div style={{ fontFamily: monoFont, fontSize: 11, opacity: 0.7 }}>{pattern.label}</div>
-          <div style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 16 }}>{exam.shortName} Mock</div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ textAlign: "right" }}>
-            <div
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 10,
+            paddingBottom: 10,
+          }}
+        >
+          <div>
+            <div style={{ fontFamily: monoFont, fontSize: 11, opacity: 0.7 }}>{pattern.label}</div>
+            <div style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 16 }}>{exam.shortName} Mock</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ textAlign: "right" }}>
+              <div
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 24,
+                  fontWeight: 700,
+                  color: timerColor,
+                  letterSpacing: 0.5,
+                }}
+              >
+                <Clock size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -3 }} />
+                {display}
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.65 }}>
+                {answeredCount}/{questions.length} answered · {Math.round(timePct)}% time left
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (window.confirm("Submit the mock test now?")) submit();
+              }}
               style={{
-                fontFamily: monoFont,
-                fontSize: 22,
-                fontWeight: 700,
-                color: left < 60 ? "#f0a0a0" : left < 300 ? "#f5d76e" : "#fff",
+                background: C.green,
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                padding: "8px 12px",
+                cursor: "pointer",
+                fontFamily: bodyFont,
+                fontWeight: 600,
+                fontSize: 12,
               }}
             >
-              <Clock size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -3 }} />
-              {display}
-            </div>
-            <div style={{ fontSize: 11, opacity: 0.65 }}>
-              {answeredCount}/{questions.length} answered
-            </div>
+              Submit
+            </button>
           </div>
-          <button
-            onClick={() => {
-              if (window.confirm("Submit the mock test now?")) submit();
-            }}
+        </div>
+        {/* Countdown progress bar */}
+        <div
+          style={{
+            height: 5,
+            background: "rgba(255,255,255,0.15)",
+            borderRadius: 0,
+            overflow: "hidden",
+          }}
+        >
+          <div
             style={{
-              background: C.green,
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              padding: "8px 12px",
-              cursor: "pointer",
+              height: "100%",
+              width: `${timePct}%`,
+              background: barColor,
+              transition: "width 1s linear, background 0.3s ease",
+            }}
+          />
+        </div>
+        {left < 60 && left > 0 && (
+          <div
+            style={{
               fontFamily: bodyFont,
-              fontWeight: 600,
-              fontSize: 12,
+              fontSize: 11,
+              color: "#f0a0a0",
+              padding: "6px 0 8px",
+              textAlign: "center",
             }}
           >
-            Submit
-          </button>
-        </div>
+            Less than 1 minute left — test will auto-submit at 0:00
+          </div>
+        )}
+        {left >= 60 && <div style={{ height: 8 }} />}
       </div>
 
       <div style={{ padding: 16 }}>
@@ -1341,26 +1481,77 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
   );
 }
 
-function MockLobby({ exam, onStart }) {
+function MockLobby({ exam, selectedYear, onYearChange, onStart }) {
   const pattern = EXAM_PATTERNS[exam.id] || EXAM_PATTERNS["ssc-cgl"];
   const totalQ = pattern.sections.reduce((a, s) => a + s.qCount, 0);
   const maxMarks = pattern.sections.reduce((a, s) => a + s.qCount * s.marksEach, 0);
   const bank = BANK[exam.id] || BANK["ssc-cgl"];
+  const yearNum = selectedYear === "all" ? null : Number(selectedYear);
   const poolSize = pattern.sections.reduce((acc, sec) => {
     const n = bank.filter((x) => x.section === sec.id).length;
     return acc + n;
   }, 0);
+  const yearPoolSize = yearNum
+    ? bank.filter((x) => x.year === yearNum).length
+    : poolSize;
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, padding: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <ListChecks size={20} color={C.ink} />
-        <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: C.ink }}>Full-length practice mock</h2>
+        <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: C.ink }}>
+          Full-length mock · year-wise
+        </h2>
       </div>
       <p style={{ margin: "0 0 14px", fontFamily: bodyFont, fontSize: 13, color: C.inkSoft, lineHeight: 1.55 }}>
-        Timed mock with live countdown. Auto-submits when time ends. Pattern matches typical {exam.shortName} papers.
-        Expanded original question bank (~{poolSize} items) covering last-5-year style topics.
+        Real full-length pattern for {exam.shortName}. Pick a year to prefer that year’s style questions;
+        shortfall is filled from other years. Original practice items (not verbatim past papers).
       </p>
+
+      {/* Year selector */}
+      <div style={{ marginBottom: 14 }}>
+        <div
+          style={{
+            fontFamily: monoFont,
+            fontSize: 10,
+            color: C.inkSoft,
+            textTransform: "uppercase",
+            marginBottom: 8,
+          }}
+        >
+          Select year (style)
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {YEAR_OPTIONS.map((y) => {
+            const active = selectedYear === y;
+            return (
+              <button
+                key={String(y)}
+                type="button"
+                onClick={() => onYearChange(y)}
+                style={{
+                  fontFamily: bodyFont,
+                  fontSize: 13,
+                  fontWeight: active ? 600 : 400,
+                  color: active ? "#fff" : C.ink,
+                  background: active ? C.ink : C.bg,
+                  border: `1px solid ${active ? C.ink : C.line}`,
+                  borderRadius: 20,
+                  padding: "7px 14px",
+                  cursor: "pointer",
+                }}
+              >
+                {y === "all" ? "All years" : y}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: 8, fontFamily: bodyFont, fontSize: 12, color: C.inkSoft }}>
+          {yearNum
+            ? `Preferring ${yearNum}-tagged items (~${yearPoolSize} in bank for this exam).`
+            : `Mixed from all years (~${poolSize} items in bank).`}
+        </div>
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginBottom: 14 }}>
         <div style={{ background: C.softBlue, borderRadius: 10, padding: 10 }}>
@@ -1383,6 +1574,9 @@ function MockLobby({ exam, onStart }) {
 
       {pattern.sections.map((s) => {
         const pool = bank.filter((x) => x.section === s.id).length;
+        const yPool = yearNum
+          ? bank.filter((x) => x.section === s.id && x.year === yearNum).length
+          : pool;
         return (
           <div
             key={s.id}
@@ -1397,7 +1591,8 @@ function MockLobby({ exam, onStart }) {
           >
             <span style={{ color: C.ink }}>{s.name}</span>
             <span style={{ fontFamily: monoFont }}>
-              {s.qCount} Q · +{s.marksEach} · pool {pool}
+              {s.qCount} Q · +{s.marksEach}
+              {yearNum ? ` · ${yearNum}: ${yPool}` : ` · pool ${pool}`}
             </span>
           </div>
         );
@@ -1423,8 +1618,12 @@ function MockLobby({ exam, onStart }) {
           fontSize: 14,
         }}
       >
-        <Play size={18} /> Start full mock (timer on)
+        <Play size={18} /> Start {selectedYear === "all" ? "full mock" : `${selectedYear}-style full mock`}
       </button>
+      <p style={{ marginTop: 10, fontSize: 11.5, color: C.inkSoft, lineHeight: 1.45 }}>
+        Full-length counts match typical official structure. Banks are original practice items in year-style
+        patterns — not copyrighted past papers. When a year’s pool is small, questions are filled from other years.
+      </p>
     </div>
   );
 }
@@ -1433,9 +1632,10 @@ export default function PracticeTestSection({ exam }) {
   const [phase, setPhase] = useState("lobby");
   const [paper, setPaper] = useState(null);
   const [result, setResult] = useState(null);
+  const [selectedYear, setSelectedYear] = useState("all");
 
   const start = () => {
-    setPaper(buildPaper(exam.id));
+    setPaper(buildPaper(exam.id, selectedYear));
     setResult(null);
     setPhase("live");
   };
@@ -1451,7 +1651,14 @@ export default function PracticeTestSection({ exam }) {
 
   return (
     <div style={{ marginTop: 8 }}>
-      {phase === "lobby" && <MockLobby exam={exam} onStart={start} />}
+      {phase === "lobby" && (
+        <MockLobby
+          exam={exam}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+          onStart={start}
+        />
+      )}
       {phase === "live" && paper && (
         <LiveTest
           exam={exam}
