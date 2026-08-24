@@ -9,6 +9,10 @@ import CloudFiles from "./CloudFiles";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "./firebase";
 
+// Imported as a namespace (not destructured) to avoid a known Vite/Rollup
+// production-build issue where some Firebase modular SDK named exports
+// (e.g. onSnapshot) get dropped during tree-shaking despite working fine
+// in dev mode. Using the namespace object sidesteps that entirely.
 import * as firestore from "firebase/firestore";
 const {
   collection,
@@ -63,6 +67,7 @@ const OMR_BG = `radial-gradient(circle, rgba(20,33,61,0.055) 1px, transparent 1p
 
 /* =========================================================
    EXAM DATA
+   Replace / expand this list with your actual exam data.
 ========================================================= */
 const EXAMS = [
   {
@@ -713,7 +718,7 @@ function SyllabusPanel({ exam }) {
             const key = `${stage.stage}-${pi}`;
             const isOpen = openKey === key;
             return (
-              <div key={key} style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden", background: C.surface }}>
+              <div key={key} style={{ border: `1px solid ${C.line}`, overflow: "hidden", background: C.surface, borderRadius: 10 }}>
                 <button
                   onClick={() => setOpenKey(isOpen ? null : key)}
                   className="hp-tap"
@@ -988,7 +993,9 @@ export default function App() {
   const [noteContent, setNoteContent] = useState("");
   const [noteTags, setNoteTags] = useState("");
 
-  /* Auth */
+  /* =======================================================
+     FIREBASE AUTH STATE
+  ======================================================= */
   useEffect(() => {
     if (!auth) {
       setAuthLoading(false);
@@ -1009,7 +1016,13 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  /* Live notes */
+  /* =======================================================
+     LIVE NOTES (onSnapshot)
+     Keeps notes in sync in real time — across refreshes,
+     tabs, and devices — and surfaces read errors
+     (e.g. permission-denied from security rules)
+     instead of silently showing an empty list.
+  ======================================================= */
   useEffect(() => {
     if (!user) {
       setNotes([]);
@@ -1041,6 +1054,8 @@ export default function App() {
           setNotesError(null);
         },
         (error) => {
+          // This fires on permission-denied, offline, etc. —
+          // surfacing it turns a silent "notes vanished" into a diagnosable error.
           console.error("Error loading notes:", error);
           setNotesError(
             error.code === "permission-denied"
@@ -1051,6 +1066,8 @@ export default function App() {
         }
       );
     } catch (error) {
+      // Catches synchronous setup errors (e.g. a bad query call)
+      // so they can never crash the whole app.
       console.error("Error setting up notes listener:", error);
       setNotesError("Can't load notes right now. Please refresh the page.");
       setNotesLoading(false);
@@ -1059,7 +1076,11 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  /* Starred exams (localStorage) */
+  /* =======================================================
+     LOAD STARRED EXAMS
+     Uses browser localStorage.
+     This avoids requiring Firestore for this feature.
+  ======================================================= */
   useEffect(() => {
     if (!user) {
       setStarred(new Set());
@@ -1102,6 +1123,8 @@ export default function App() {
           tags,
           updatedAt: serverTimestamp(),
         });
+        // No local setNotes needed — the onSnapshot listener
+        // above will pick up this write and update state automatically.
       } else {
         await addDoc(collection(db, "notes"), {
           userId: user.uid,
@@ -1111,6 +1134,8 @@ export default function App() {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
+        // Same here — onSnapshot will add the new note to state
+        // once Firestore confirms the write.
       }
 
       setNoteTitle("");
@@ -1129,6 +1154,8 @@ export default function App() {
 
     try {
       await deleteDoc(doc(db, "notes", noteId));
+      // onSnapshot will remove it from state once the delete is confirmed.
+
       if (editingNote === noteId) {
         setEditingNote(null);
         setNoteTitle("");
@@ -1141,6 +1168,9 @@ export default function App() {
     }
   };
 
+  /* =======================================================
+     STAR / TRACK EXAM
+  ======================================================= */
   const toggleStar = useCallback(
     (id) => {
       if (!user) return;
@@ -1196,7 +1226,9 @@ export default function App() {
     setShowNotes(true);
   };
 
-  /* Loading & Auth screens */
+  /* =======================================================
+     AUTH LOADING SCREEN
+  ======================================================= */
   if (authLoading) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg, fontFamily: bodyFont, color: C.ink }}>
@@ -1211,7 +1243,9 @@ export default function App() {
 
   if (!user) return <Auth />;
 
-  /* Main App */
+  /* =======================================================
+     HALL PASS APP
+  ======================================================= */
   return (
     <div
       style={{
