@@ -43,6 +43,7 @@ import {
   ShieldCheck,
   Download,
   CalendarDays,
+  List,
 } from "lucide-react";
 
 /* =========================================================
@@ -113,6 +114,101 @@ const EXAMS = [
       "Personality Test",
     ],
 
+    syllabus: [
+      {
+        stage: "Prelims",
+        papers: [
+          {
+            name: "GS Paper I",
+            topics: [
+              "Current events of national & international importance",
+              "History of India & Indian National Movement",
+              "Indian & World Geography (Physical, Social, Economic)",
+              "Indian Polity & Governance — Constitution, Political System, Panchayati Raj, Rights",
+              "Economic & Social Development — Sustainable Development, Poverty, Inclusion",
+              "Environmental ecology, Biodiversity & Climate Change",
+              "General Science",
+            ],
+          },
+          {
+            name: "CSAT (Paper II) — Qualifying",
+            topics: [
+              "Comprehension",
+              "Interpersonal skills including communication skills",
+              "Logical reasoning & analytical ability",
+              "Decision making & problem solving",
+              "General mental ability",
+              "Basic numeracy (Class X level) & Data interpretation",
+            ],
+          },
+        ],
+      },
+      {
+        stage: "Mains",
+        papers: [
+          {
+            name: "Essay",
+            topics: [
+              "Two essays (~1000 words each) from philosophical, governance, society, technology & current-event themes",
+            ],
+          },
+          {
+            name: "GS-I — Heritage, History, Geography, Society",
+            topics: [
+              "Indian culture — art forms, literature, architecture",
+              "Modern Indian history (mid-18th century onwards)",
+              "Freedom struggle — stages & contributors",
+              "Post-independence consolidation",
+              "History of the world (18th century events, industrial revolution, world wars, etc.)",
+              "Indian society — diversity, role of women, poverty, urbanization",
+              "World & Indian geography — physical, resources, industries",
+            ],
+          },
+          {
+            name: "GS-II — Governance, Constitution, Polity, Social Justice, IR",
+            topics: [
+              "Indian Constitution — evolution, features, amendments, basic structure",
+              "Functions & responsibilities of Union & States; federal issues",
+              "Separation of powers, dispute redressal mechanisms",
+              "Parliament & State legislatures; Executive & Judiciary",
+              "Statutory, regulatory & quasi-judicial bodies",
+              "Government policies & interventions for development",
+              "Welfare schemes, social sector, health, education, HRD",
+              "International relations — India & neighbourhood, bilateral/global groupings",
+            ],
+          },
+          {
+            name: "GS-III — Technology, Economy, Biodiversity, Security, Disaster Mgmt",
+            topics: [
+              "Indian economy — planning, growth, employment, inclusive growth",
+              "Agriculture, food processing, land reforms",
+              "Science & technology developments; indigenization",
+              "Environment, biodiversity, climate change, conservation",
+              "Disaster management",
+              "Internal security — extremism, cyber security, border management",
+            ],
+          },
+          {
+            name: "GS-IV — Ethics, Integrity & Aptitude",
+            topics: [
+              "Ethics & human interface — essence, determinants, consequences",
+              "Attitude, aptitude, emotional intelligence",
+              "Moral thinkers & philosophers (India & world)",
+              "Public/Civil service values & ethics in public administration",
+              "Probity in governance, RTI, codes of ethics/conduct",
+              "Case studies on above issues",
+            ],
+          },
+          {
+            name: "Optional Subject (2 papers)",
+            topics: [
+              "One optional subject chosen from the official list of ~48 subjects (literature & non-literature)",
+            ],
+          },
+        ],
+      },
+    ],
+
     officialWebsite: "https://upsc.gov.in/",
     notificationUrl: "https://upsc.gov.in/examinations",
   },
@@ -139,6 +235,91 @@ const EXAMS = [
       "Tier-I",
       "Tier-II",
       "Document Verification",
+    ],
+
+    syllabus: [
+      {
+        stage: "Tier I",
+        papers: [
+          {
+            name: "General Intelligence & Reasoning",
+            topics: [
+              "Analogy, Classification, Series (number/figural)",
+              "Coding-Decoding, Blood Relations, Direction Sense",
+              "Venn Diagrams, Syllogism, Statement–Conclusion",
+              "Paper folding/cutting, Embedded figures, Matrix",
+              "Order & Ranking, Puzzles",
+            ],
+          },
+          {
+            name: "General Awareness",
+            topics: [
+              "Current events (national & international)",
+              "Indian History, Geography, Polity & Constitution",
+              "Economy, Budget, Government schemes",
+              "General Science & Everyday Science",
+              "Environment, Ecology, Sports, Awards, Books",
+            ],
+          },
+          {
+            name: "Quantitative Aptitude",
+            topics: [
+              "Number System, Simplification, LCM/HCF",
+              "Percentage, Ratio & Proportion, Average",
+              "Profit & Loss, Discount, SI & CI",
+              "Time & Work, Time-Speed-Distance, Mixture",
+              "Algebra, Geometry, Mensuration, Trigonometry",
+              "Data Interpretation (tables, graphs)",
+            ],
+          },
+          {
+            name: "English Comprehension",
+            topics: [
+              "Reading Comprehension, Cloze Test",
+              "Error Spotting, Sentence Improvement",
+              "Synonyms, Antonyms, Idioms & Phrases",
+              "One-word substitution, Fill in the blanks",
+              "Para Jumbles, Active/Passive, Direct/Indirect",
+            ],
+          },
+        ],
+      },
+      {
+        stage: "Tier II (Paper I — compulsory)",
+        papers: [
+          {
+            name: "Mathematical Abilities",
+            topics: [
+              "Advanced Arithmetic, Algebra, Geometry, Mensuration",
+              "Trigonometry, Statistics, Probability, Data Interpretation",
+            ],
+          },
+          {
+            name: "Reasoning & General Intelligence",
+            topics: [
+              "Higher-order puzzles, seating arrangements, critical thinking, emotional & social intelligence",
+            ],
+          },
+          {
+            name: "English Language & Comprehension",
+            topics: [
+              "Longer RC passages, para-jumbles, advanced grammar, complex cloze tests",
+            ],
+          },
+          {
+            name: "General Awareness",
+            topics: [
+              "Static GK + recent current affairs (deeper than Tier I)",
+            ],
+          },
+          {
+            name: "Computer Knowledge + DEST",
+            topics: [
+              "Computer basics, OS, MS Office, Internet, Networking; Data Entry Speed Test (qualifying)",
+            ],
+          },
+        ],
+      },
     ],
 
     officialWebsite: "https://ssc.gov.in/",
@@ -169,6 +350,46 @@ const EXAMS = [
       "Counselling",
     ],
 
+    syllabus: [
+      {
+        stage: "Paper 1 (B.E./B.Tech)",
+        papers: [
+          {
+            name: "Physics",
+            topics: [
+              "Units & Measurements, Kinematics, Laws of Motion",
+              "Work, Energy & Power, Rotational Motion, Gravitation",
+              "Properties of Solids & Liquids, Thermodynamics, Kinetic Theory",
+              "Oscillations & Waves",
+              "Electrostatics, Current Electricity, Magnetic Effects",
+              "EMI & AC, Electromagnetic Waves, Optics",
+              "Dual Nature of Matter, Atoms & Nuclei, Electronic Devices",
+              "Experimental Skills",
+            ],
+          },
+          {
+            name: "Chemistry",
+            topics: [
+              "Physical: Basic Concepts, Atomic Structure, Chemical Bonding, Thermodynamics, Equilibrium, Redox & Electrochemistry, Chemical Kinetics, Solutions, Surface Chemistry",
+              "Inorganic: Periodic Table, s/p/d/f-Block, Coordination Compounds, Isolation of Metals",
+              "Organic: Basic Principles, Hydrocarbons, Haloalkanes/Haloarenes, Alcohols/Phenols/Ethers, Aldehydes/Ketones/Carboxylic Acids, Amines, Biomolecules, Polymers",
+            ],
+          },
+          {
+            name: "Mathematics",
+            topics: [
+              "Sets, Relations & Functions; Complex Numbers & Quadratic Equations",
+              "Matrices & Determinants; Permutations & Combinations; Binomial Theorem",
+              "Sequences & Series; Limits, Continuity & Differentiability",
+              "Integral Calculus; Differential Equations",
+              "Coordinate Geometry (2D); Three-Dimensional Geometry; Vector Algebra",
+              "Statistics & Probability; Trigonometry",
+            ],
+          },
+        ],
+      },
+    ],
+
     officialWebsite: "https://jeemain.nta.nic.in/",
     notificationUrl: "https://jeemain.nta.nic.in/",
   },
@@ -195,6 +416,29 @@ const EXAMS = [
       "Computer Based Test",
       "Score",
       "Admission / Recruitment",
+    ],
+
+    syllabus: [
+      {
+        stage: "GATE (paper-specific)",
+        papers: [
+          {
+            name: "General Aptitude (common to all papers)",
+            topics: [
+              "Verbal Ability — English grammar, sentence completion, verbal analogies, word groups, instructions, critical reasoning, verbal deduction",
+              "Numerical Ability — Numerical computation, numerical estimation, numerical reasoning, data interpretation",
+            ],
+          },
+          {
+            name: "Subject paper (chosen discipline)",
+            topics: [
+              "Core engineering/science topics as per the chosen GATE paper code (CS, ME, EE, EC, CE, etc.)",
+              "Engineering Mathematics (for most papers)",
+              "See official GATE brochure for the full syllabus of your paper",
+            ],
+          },
+        ],
+      },
     ],
 
     officialWebsite: "https://gate2027.iitg.ac.in/",
@@ -225,6 +469,42 @@ const EXAMS = [
       "Further admission process",
     ],
 
+    syllabus: [
+      {
+        stage: "Three sections (40 min each)",
+        papers: [
+          {
+            name: "VARC — Verbal Ability & Reading Comprehension",
+            topics: [
+              "Reading Comprehension (inference, specific detail, tone, critical analysis)",
+              "Para Jumbles / Jumbled Paragraphs",
+              "Para Summary",
+              "Odd Sentence Out",
+              "Verbal reasoning & logic (no direct grammar/spelling questions)",
+            ],
+          },
+          {
+            name: "DILR — Data Interpretation & Logical Reasoning",
+            topics: [
+              "Tables, Bar/Line/Pie/Column graphs, Caselets, Venn diagrams",
+              "Seating arrangements (linear/circular), Blood relations, Puzzles",
+              "Binary logic, Games & tournaments, Routes & networks",
+              "Data sufficiency, Sets, Ranking & ordering",
+            ],
+          },
+          {
+            name: "Quantitative Aptitude",
+            topics: [
+              "Arithmetic: Percentages, Ratio & Proportion, Averages, Profit & Loss, SI/CI, Time-Speed-Distance, Time & Work, Mixtures",
+              "Algebra: Equations, Inequalities, Functions, Logarithms, Progressions",
+              "Geometry & Mensuration: Triangles, Circles, Polygons, 2D/3D figures",
+              "Number System, Modern Math (Probability, Permutation & Combination, Set Theory)",
+            ],
+          },
+        ],
+      },
+    ],
+
     officialWebsite: "https://iimcat.ac.in/",
     notificationUrl: "https://iimcat.ac.in/",
   },
@@ -251,6 +531,50 @@ const EXAMS = [
       "Entrance Examination",
       "Result",
       "Counselling",
+    ],
+
+    syllabus: [
+      {
+        stage: "Single paper (PCB)",
+        papers: [
+          {
+            name: "Physics",
+            topics: [
+              "Physics & Measurement, Kinematics, Laws of Motion",
+              "Work, Energy & Power, Rotational Motion, Gravitation",
+              "Properties of Solids & Liquids, Thermodynamics, Kinetic Theory",
+              "Oscillations & Waves",
+              "Electrostatics, Current Electricity, Magnetic Effects & Magnetism",
+              "EMI & Alternating Currents, Electromagnetic Waves, Optics",
+              "Dual Nature of Matter & Radiation, Atoms & Nuclei, Electronic Devices",
+              "Experimental Skills",
+            ],
+          },
+          {
+            name: "Chemistry",
+            topics: [
+              "Physical: Basic Concepts, Atomic Structure, Chemical Bonding, Thermodynamics, Solutions, Equilibrium, Redox & Electrochemistry, Chemical Kinetics",
+              "Inorganic: Classification of Elements & Periodicity, p-Block, d- & f-Block, Coordination Compounds",
+              "Organic: Purification & Characterisation, Basic Principles, Hydrocarbons, Compounds containing Halogens/Oxygen/Nitrogen, Biomolecules",
+            ],
+          },
+          {
+            name: "Biology (Botany + Zoology)",
+            topics: [
+              "Diversity in the Living World",
+              "Structural Organisation in Animals & Plants",
+              "Cell Structure & Function",
+              "Plant Physiology",
+              "Human Physiology",
+              "Reproduction",
+              "Genetics & Evolution",
+              "Biology & Human Welfare",
+              "Biotechnology & Its Applications",
+              "Ecology & Environment",
+            ],
+          },
+        ],
+      },
     ],
 
     officialWebsite: "https://neet.nta.nic.in/",
@@ -666,6 +990,148 @@ function ExamCard({
 }
 
 /* =========================================================
+   SYLLABUS BREAKDOWN
+========================================================= */
+
+function SyllabusPanel({ exam }) {
+  const stages = exam.syllabus || [];
+  const [openKey, setOpenKey] = useState(() =>
+    stages.length && stages[0].papers?.length
+      ? `${stages[0].stage}-0`
+      : null
+  );
+
+  if (stages.length === 0) {
+    return null;
+  }
+
+  return (
+    <section style={{ marginBottom: 22 }}>
+      <h2
+        style={{
+          fontFamily: displayFont,
+          fontSize: 18,
+          margin: "0 0 8px",
+          color: C.ink,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        <List size={18} color={C.inkSoft} />
+        Syllabus breakdown
+      </h2>
+
+      <div
+        style={{
+          fontFamily: bodyFont,
+          fontSize: 12,
+          color: C.inkSoft,
+          marginBottom: 12,
+        }}
+      >
+        Official topic outlines by stage. Always cross-check the latest notification on the official site.
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {stages.map((stage) =>
+          stage.papers.map((paper, pi) => {
+            const key = `${stage.stage}-${pi}`;
+            const isOpen = openKey === key;
+            return (
+              <div
+                key={key}
+                style={{
+                  border: `1px solid ${C.line}`,
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  background: C.surface,
+                }}
+              >
+                <button
+                  onClick={() => setOpenKey(isOpen ? null : key)}
+                  className="hp-tap"
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    background: C.bg,
+                    border: "none",
+                    padding: "10px 12px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontFamily: monoFont,
+                        fontSize: 10,
+                        color: C.inkSoft,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.4,
+                      }}
+                    >
+                      {stage.stage}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: bodyFont,
+                        fontSize: 13.5,
+                        fontWeight: 600,
+                        color: C.ink,
+                        marginTop: 2,
+                      }}
+                    >
+                      {paper.name}
+                    </div>
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    color={C.inkSoft}
+                    style={{
+                      transform: isOpen ? "rotate(180deg)" : "none",
+                      transition: "transform .15s",
+                      flexShrink: 0,
+                    }}
+                  />
+                </button>
+                {isOpen && (
+                  <ul
+                    style={{
+                      margin: 0,
+                      padding: "8px 14px 12px 28px",
+                      background: "#fff",
+                    }}
+                  >
+                    {paper.topics.map((t, ti) => (
+                      <li
+                        key={ti}
+                        style={{
+                          fontFamily: bodyFont,
+                          fontSize: 12.5,
+                          color: C.inkSoft,
+                          lineHeight: 1.55,
+                          marginTop: ti === 0 ? 0 : 6,
+                        }}
+                      >
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
    EXAM DETAIL
 ========================================================= */
 
@@ -1031,6 +1497,8 @@ function ExamDetail({
               ))}
             </div>
           </section>
+
+          <SyllabusPanel exam={exam} />
 
           <section
             style={{
@@ -1578,7 +2046,7 @@ const startEditingNote = (note) => {
           min-height: 34px;
           min-width: 34px;
           display: inline-flex;
-          align-items: center;
+          alignItems: center;
           justify-content: center;
         }
 
