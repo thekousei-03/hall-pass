@@ -119,6 +119,31 @@ const EXAM_PATTERNS = {
 
 const YEAR_OPTIONS = [2025, 2024, 2023, 2022, 2021, "all"];
 
+const PROGRESS_KEY = (uid) => `hallpass-progress:${uid || "guest"}`;
+
+function loadProgress(uid) {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY(uid));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveProgressAttempt(uid, attempt) {
+  try {
+    const list = loadProgress(uid);
+    list.unshift(attempt);
+    localStorage.setItem(PROGRESS_KEY(uid), JSON.stringify(list.slice(0, 50)));
+  } catch (e) {
+    console.error("Could not save progress:", e);
+  }
+}
+
+export { loadProgress, saveProgressAttempt, PROGRESS_KEY };
+
 function q(id, section, year, text, options, correctIndex, explanation) {
   return { id, section, year, text, options, correctIndex, explanation };
 }
@@ -743,14 +768,34 @@ function shuffleArr(arr) {
   return a;
 }
 
-/** Build a full-length paper. Prefer questions tagged with selected year, then fill from other years. */
-function buildPaper(examId, year = "all") {
-  const pattern = EXAM_PATTERNS[examId] || EXAM_PATTERNS["ssc-cgl"];
+/**
+ * Build a paper.
+ * - mode "full": all sections (default)
+ * - mode "sectional" + sectionId: only that section, shorter timer
+ */
+function buildPaper(examId, year = "all", { mode = "full", sectionId = null } = {}) {
+  const base = EXAM_PATTERNS[examId] || EXAM_PATTERNS["ssc-cgl"];
   const bank = BANK[examId] || BANK["ssc-cgl"];
   const questions = [];
   const yearNum = year === "all" ? null : Number(year);
 
-  pattern.sections.forEach((sec) => {
+  let sections = base.sections;
+  if (mode === "sectional" && sectionId) {
+    sections = base.sections.filter((s) => s.id === sectionId);
+    if (!sections.length) sections = base.sections.slice(0, 1);
+  }
+
+  // Sectional short tests: fewer questions, proportional time
+  const isSectional = mode === "sectional" && sections.length === 1;
+
+  sections.forEach((sec) => {
+    const qCount = isSectional
+      ? Math.min(sec.qCount, Math.max(10, Math.round(sec.qCount * 0.5)))
+      : sec.qCount;
+    const timeMin = isSectional
+      ? Math.max(8, Math.round((sec.timeMin || 15) * (qCount / sec.qCount)))
+      : sec.timeMin;
+
     const sectionPool = bank.filter((x) => x.section === sec.id);
     let preferred = yearNum
       ? sectionPool.filter((x) => x.year === yearNum)
@@ -761,11 +806,10 @@ function buildPaper(examId, year = "all") {
 
     preferred = shuffleArr(preferred);
     rest = shuffleArr(rest);
-    // Prefer year-tagged, then others; recycle if still short
     const ordered = [...preferred, ...rest];
     if (ordered.length === 0 && sectionPool.length) ordered.push(...shuffleArr(sectionPool));
 
-    for (let i = 0; i < sec.qCount; i++) {
+    for (let i = 0; i < qCount; i++) {
       const item = ordered[i % Math.max(ordered.length, 1)] || sectionPool[0];
       if (!item) continue;
       questions.push({
@@ -777,17 +821,36 @@ function buildPaper(examId, year = "all") {
         qNum: questions.length + 1,
       });
     }
+
+    // attach computed time for sectional pattern rebuild
+    sec._builtQCount = qCount;
+    sec._builtTimeMin = timeMin;
   });
+
+  const totalTimeMin = isSectional
+    ? sections[0]._builtTimeMin
+    : base.totalTimeMin;
+  const builtSections = sections.map((s) => ({
+    ...s,
+    qCount: s._builtQCount || s.qCount,
+    timeMin: s._builtTimeMin || s.timeMin,
+  }));
+
+  const labelBase = isSectional
+    ? `${base.label.replace(/\(full length\)/i, "").trim()} · Sectional · ${builtSections[0].name}`
+    : base.label;
 
   return {
     pattern: {
-      ...pattern,
-      label: yearNum
-        ? `${pattern.label} · ${yearNum}-style`
-        : pattern.label,
+      ...base,
+      sections: builtSections,
+      totalTimeMin,
+      sectionalTimer: isSectional ? false : base.sectionalTimer,
+      label: yearNum ? `${labelBase} · ${yearNum}-style` : labelBase,
     },
     questions,
     year: yearNum || "all",
+    mode: isSectional ? "sectional" : "full",
   };
 }
 
@@ -941,13 +1004,14 @@ function AccuracyPie({ correct, wrong, unattempted }) {
   );
 }
 
-function ResultsView({ exam, pattern, questions, answers, flagged, timeTakenSec, onRetry, onClose }) {
+function ResultsView({ exam, pattern, questions, answers, flagged, timeTakenSec, onRetry, onClose, userId, mode }) {
   const analysis = useMemo(() => {
     let correct = 0,
       wrong = 0,
       unattempted = 0,
       score = 0;
     const bySection = {};
+    const weakQuestions = [];
     pattern.sections.forEach((s) => {
       bySection[s.id] = {
         name: s.name,
@@ -978,9 +1042,19 @@ function ResultsView({ exam, pattern, questions, answers, flagged, timeTakenSec,
           sec.wrong++;
           sec.score -= pattern.negativeMark;
         }
+        weakQuestions.push(qu);
       }
     });
     const maxScore = questions.reduce((a, qu) => a + qu.marksEach, 0);
+    // Rank sections by accuracy (weak first)
+    const sectionRank = Object.values(bySection)
+      .map((s) => {
+        const attempted = s.correct + s.wrong;
+        const acc = attempted ? s.correct / attempted : 1;
+        return { ...s, accuracy: acc, attempted };
+      })
+      .sort((a, b) => a.accuracy - b.accuracy);
+
     return {
       correct,
       wrong,
@@ -988,8 +1062,31 @@ function ResultsView({ exam, pattern, questions, answers, flagged, timeTakenSec,
       score: Math.round(score * 100) / 100,
       maxScore,
       bySection,
+      weakQuestions,
+      sectionRank,
     };
   }, [questions, answers, pattern]);
+
+  // Persist attempt once
+  useEffect(() => {
+    if (!userId) return;
+    saveProgressAttempt(userId, {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      examId: exam.id,
+      examName: exam.shortName,
+      mode: mode || "full",
+      score: analysis.score,
+      maxScore: analysis.maxScore,
+      correct: analysis.correct,
+      wrong: analysis.wrong,
+      unattempted: analysis.unattempted,
+      timeTakenSec,
+      weakSections: analysis.sectionRank
+        .filter((s) => s.attempted > 0 && s.accuracy < 0.6)
+        .map((s) => s.name),
+      at: new Date().toISOString(),
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pct = analysis.maxScore
     ? Math.round((Math.max(0, analysis.score) / analysis.maxScore) * 100)
@@ -1091,6 +1188,52 @@ function ResultsView({ exam, pattern, questions, answers, flagged, timeTakenSec,
             </div>
           ))}
         </div>
+
+        {/* Weak-topic review */}
+        {analysis.sectionRank.some((s) => s.attempted > 0) && (
+          <div style={{ marginBottom: 22 }}>
+            <div style={{ fontFamily: displayFont, fontSize: 16, fontWeight: 700, marginBottom: 8, color: C.ink }}>
+              Weak areas to revise
+            </div>
+            <p style={{ margin: "0 0 10px", fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft, lineHeight: 1.45 }}>
+              Sections ranked by accuracy on this attempt. Focus practice here next.
+            </p>
+            <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+              {analysis.sectionRank.map((s) => {
+                const pct = Math.round(s.accuracy * 100);
+                const tone = pct >= 70 ? C.softGreen : pct >= 40 ? C.softYellow : C.softRed;
+                const text = pct >= 70 ? C.green : pct >= 40 ? "#8a6200" : C.red;
+                return (
+                  <div
+                    key={s.name}
+                    style={{
+                      background: tone,
+                      borderRadius: 10,
+                      padding: "10px 12px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span style={{ fontFamily: bodyFont, fontSize: 13, fontWeight: 600, color: C.ink }}>{s.name}</span>
+                    <span style={{ fontFamily: monoFont, fontSize: 13, fontWeight: 700, color: text }}>
+                      {s.attempted ? `${pct}% accuracy` : "Not attempted"}
+                      {s.wrong ? ` · ${s.wrong} wrong` : ""}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            {analysis.weakQuestions.length > 0 && (
+              <div style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft }}>
+                {analysis.weakQuestions.length} question{analysis.weakQuestions.length === 1 ? "" : "s"} to review below
+                (marked wrong).
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={{ fontFamily: displayFont, fontSize: 16, fontWeight: 700, marginBottom: 10, color: C.ink }}>
           Answer review
@@ -1804,10 +1947,21 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
   );
 }
 
-function MockLobby({ exam, selectedYear, onYearChange, onStart }) {
+function MockLobby({ exam, selectedYear, onYearChange, onStart, mode, onModeChange, sectionId, onSectionChange }) {
   const pattern = EXAM_PATTERNS[exam.id] || EXAM_PATTERNS["ssc-cgl"];
-  const totalQ = pattern.sections.reduce((a, s) => a + s.qCount, 0);
-  const maxMarks = pattern.sections.reduce((a, s) => a + s.qCount * s.marksEach, 0);
+  const isSectional = mode === "sectional";
+  const activeSec = isSectional
+    ? pattern.sections.find((s) => s.id === sectionId) || pattern.sections[0]
+    : null;
+  const totalQ = isSectional && activeSec
+    ? Math.min(activeSec.qCount, Math.max(10, Math.round(activeSec.qCount * 0.5)))
+    : pattern.sections.reduce((a, s) => a + s.qCount, 0);
+  const maxMarks = isSectional && activeSec
+    ? totalQ * activeSec.marksEach
+    : pattern.sections.reduce((a, s) => a + s.qCount * s.marksEach, 0);
+  const timerMin = isSectional && activeSec
+    ? Math.max(8, Math.round((activeSec.timeMin || 15) * (totalQ / activeSec.qCount)))
+    : pattern.totalTimeMin;
   const bank = BANK[exam.id] || BANK["ssc-cgl"];
   const yearNum = selectedYear === "all" ? null : Number(selectedYear);
   const poolSize = pattern.sections.reduce((acc, sec) => {
@@ -1823,18 +1977,88 @@ function MockLobby({ exam, selectedYear, onYearChange, onStart }) {
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <ListChecks size={20} color={C.ink} />
         <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: C.ink }}>
-          Full-length mock · year-wise
+          {isSectional ? "Sectional short test" : "Full-length mock · year-wise"}
         </h2>
       </div>
       <p style={{ margin: "0 0 14px", fontFamily: bodyFont, fontSize: 13, color: C.inkSoft, lineHeight: 1.55 }}>
-        Real full-length pattern for {exam.shortName}. Pick a year to prefer that year’s style questions;
-        shortfall is filled from other years. Original practice items (not verbatim past papers).
-        {pattern.sectionalTimer
+        {isSectional
+          ? `Quick practice on one section of ${exam.shortName} — fewer questions, shorter timer.`
+          : `Real full-length pattern for ${exam.shortName}. Pick a year to prefer that year’s style questions; shortfall is filled from other years.`}
+        {" "}Original practice items (not verbatim past papers).
+        {!isSectional && pattern.sectionalTimer
           ? " This exam uses section-wise timers — you cannot return to a finished section."
-          : pattern.sections?.length > 1
+          : !isSectional && pattern.sections?.length > 1
             ? " Section times below are suggested pacing guides; navigation is free within the overall timer."
             : ""}
       </p>
+
+      {/* Mode: full vs sectional */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, textTransform: "uppercase", marginBottom: 8 }}>
+          Test type
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {[
+            { id: "full", label: "Full mock" },
+            { id: "sectional", label: "Sectional short" },
+          ].map((m) => {
+            const active = mode === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => onModeChange(m.id)}
+                style={{
+                  fontFamily: bodyFont,
+                  fontSize: 13,
+                  fontWeight: active ? 600 : 400,
+                  color: active ? "#fff" : C.ink,
+                  background: active ? C.ink : C.bg,
+                  border: `1px solid ${active ? C.ink : C.line}`,
+                  borderRadius: 20,
+                  padding: "7px 14px",
+                  cursor: "pointer",
+                }}
+              >
+                {m.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {isSectional && pattern.sections.length > 1 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, textTransform: "uppercase", marginBottom: 8 }}>
+            Section
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {pattern.sections.map((s) => {
+              const active = (sectionId || pattern.sections[0].id) === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => onSectionChange(s.id)}
+                  style={{
+                    fontFamily: bodyFont,
+                    fontSize: 12.5,
+                    fontWeight: active ? 600 : 400,
+                    color: active ? "#fff" : C.ink,
+                    background: active ? C.blue : C.bg,
+                    border: `1px solid ${active ? C.blue : C.line}`,
+                    borderRadius: 20,
+                    padding: "6px 12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  {s.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Year selector */}
       <div style={{ marginBottom: 14 }}>
@@ -1888,9 +2112,9 @@ function MockLobby({ exam, selectedYear, onYearChange, onStart }) {
         </div>
         <div style={{ background: C.softGreen, borderRadius: 10, padding: 10 }}>
           <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft }}>
-            {pattern.sectionalTimer ? "SECTIONAL" : "TIMER"}
+            {isSectional ? "SHORT" : pattern.sectionalTimer ? "SECTIONAL" : "TIMER"}
           </div>
-          <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700 }}>{pattern.totalTimeMin} min</div>
+          <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700 }}>{timerMin} min</div>
         </div>
         <div style={{ background: C.softYellow, borderRadius: 10, padding: 10 }}>
           <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft }}>MAX MARKS</div>
@@ -1950,29 +2174,43 @@ function MockLobby({ exam, selectedYear, onYearChange, onStart }) {
           fontSize: 14,
         }}
       >
-        <Play size={18} /> Start {selectedYear === "all" ? "full mock" : `${selectedYear}-style full mock`}
+        <Play size={18} />{" "}
+        {isSectional
+          ? `Start ${activeSec?.name || "section"} short test`
+          : selectedYear === "all"
+            ? "Start full mock"
+            : `Start ${selectedYear}-style full mock`}
       </button>
       <p style={{ marginTop: 10, fontSize: 11.5, color: C.inkSoft, lineHeight: 1.45 }}>
-        Full-length counts match typical official structure. Banks are original practice items in year-style
-        patterns — not copyrighted past papers. When a year’s pool is small, questions are filled from other years.
+        {isSectional
+          ? "Sectional shorts are faster daily drills. Wrong answers feed your weak-area review after the test."
+          : "Full-length counts match typical official structure. Banks are original practice items in year-style patterns — not copyrighted past papers."}
       </p>
     </div>
   );
 }
 
-export default function PracticeTestSection({ exam }) {
+export default function PracticeTestSection({ exam, user }) {
   const [phase, setPhase] = useState("lobby");
   const [paper, setPaper] = useState(null);
   const [result, setResult] = useState(null);
   const [selectedYear, setSelectedYear] = useState("all");
+  const [mode, setMode] = useState("full");
+  const pattern = EXAM_PATTERNS[exam.id];
+  const [sectionId, setSectionId] = useState(pattern?.sections?.[0]?.id || null);
 
   const start = () => {
-    setPaper(buildPaper(exam.id, selectedYear));
+    setPaper(
+      buildPaper(exam.id, selectedYear, {
+        mode,
+        sectionId: mode === "sectional" ? sectionId : null,
+      })
+    );
     setResult(null);
     setPhase("live");
   };
 
-  if (!EXAM_PATTERNS[exam.id]) {
+  if (!pattern) {
     return (
       <div style={{ padding: 16, background: C.bg, borderRadius: 12, fontSize: 13, color: C.inkSoft }}>
         <BookOpen size={18} style={{ marginBottom: 6 }} />
@@ -1989,6 +2227,15 @@ export default function PracticeTestSection({ exam }) {
           selectedYear={selectedYear}
           onYearChange={setSelectedYear}
           onStart={start}
+          mode={mode}
+          onModeChange={(m) => {
+            setMode(m);
+            if (m === "sectional" && !sectionId) {
+              setSectionId(pattern.sections[0]?.id || null);
+            }
+          }}
+          sectionId={sectionId}
+          onSectionChange={setSectionId}
         />
       )}
       {phase === "live" && paper && (
@@ -2012,6 +2259,8 @@ export default function PracticeTestSection({ exam }) {
           answers={result.answers}
           flagged={result.flagged}
           timeTakenSec={result.timeTakenSec}
+          userId={user?.uid}
+          mode={paper.mode || mode}
           onRetry={start}
           onClose={() => setPhase("lobby")}
         />

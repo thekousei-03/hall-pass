@@ -3,7 +3,7 @@ import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
 import Auth from "./Auth";
-import PracticeTestSection from "./PracticeTest";
+import PracticeTestSection, { loadProgress } from "./PracticeTest";
 import CloudFiles from "./CloudFiles";
 
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -38,6 +38,9 @@ import {
   ChevronDown,
   CalendarDays,
   List,
+  Moon,
+  Sun,
+  TrendingUp,
 } from "lucide-react";
 
 /* =========================================================
@@ -64,6 +67,189 @@ const C = {
 };
 
 const OMR_BG = `radial-gradient(circle, rgba(20,33,61,0.055) 1px, transparent 1px)`;
+const OMR_BG_DARK = `radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)`;
+
+const THEMES = {
+  light: {
+    bg: "#f4f1ea",
+    surface: "#ffffff",
+    ink: "#14213d",
+    inkSoft: "#667085",
+    line: "#d9d5cc",
+    red: "#c84c4c",
+    green: "#3c7a57",
+    yellow: "#d99a27",
+    blue: "#4267a9",
+    softRed: "#f8e4e1",
+    softGreen: "#e5f1e9",
+    softBlue: "#e8eef8",
+    softYellow: "#f8efd9",
+    omr: OMR_BG,
+  },
+  dark: {
+    bg: "#0f1419",
+    surface: "#1a2332",
+    ink: "#e8eef8",
+    inkSoft: "#8b9bb4",
+    line: "#2a3548",
+    red: "#e07070",
+    green: "#5cb88a",
+    yellow: "#e0b04a",
+    blue: "#6b8fd4",
+    softRed: "#3a2222",
+    softGreen: "#1e3328",
+    softBlue: "#1a2740",
+    softYellow: "#3a3020",
+    omr: OMR_BG_DARK,
+  },
+};
+
+/* =========================================================
+   PROGRESS DASHBOARD
+========================================================= */
+function ProgressDashboard({ userId, colors }) {
+  const [attempts, setAttempts] = useState([]);
+  const T = colors || C;
+
+  useEffect(() => {
+    setAttempts(loadProgress(userId));
+  }, [userId]);
+
+  // Refresh when window regains focus (after a mock)
+  useEffect(() => {
+    const onFocus = () => setAttempts(loadProgress(userId));
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [userId]);
+
+  if (!attempts.length) {
+    return (
+      <div
+        style={{
+          background: T.surface,
+          border: `1px solid ${T.line}`,
+          borderRadius: 14,
+          padding: 16,
+          marginBottom: 20,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <TrendingUp size={20} color={T.ink} />
+          <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: T.ink }}>Your progress</h2>
+        </div>
+        <p style={{ margin: 0, fontFamily: bodyFont, fontSize: 13, color: T.inkSoft, lineHeight: 1.5 }}>
+          Complete a full or sectional mock to see scores, accuracy, and weak sections here.
+        </p>
+      </div>
+    );
+  }
+
+  const avgPct =
+    attempts.reduce((a, x) => a + (x.maxScore ? (x.score / x.maxScore) * 100 : 0), 0) / attempts.length;
+  const weakMap = {};
+  attempts.forEach((a) => {
+    (a.weakSections || []).forEach((w) => {
+      weakMap[w] = (weakMap[w] || 0) + 1;
+    });
+  });
+  const topWeak = Object.entries(weakMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+
+  return (
+    <div
+      style={{
+        background: T.surface,
+        border: `1px solid ${T.line}`,
+        borderRadius: 14,
+        padding: 16,
+        marginBottom: 20,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <TrendingUp size={20} color={T.ink} />
+        <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: T.ink }}>Your progress</h2>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8, marginBottom: 14 }}>
+        <div style={{ background: T.softBlue, borderRadius: 10, padding: 10 }}>
+          <div style={{ fontFamily: monoFont, fontSize: 10, color: T.inkSoft }}>MOCKS</div>
+          <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700, color: T.ink }}>{attempts.length}</div>
+        </div>
+        <div style={{ background: T.softGreen, borderRadius: 10, padding: 10 }}>
+          <div style={{ fontFamily: monoFont, fontSize: 10, color: T.inkSoft }}>AVG %</div>
+          <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700, color: T.ink }}>
+            {Math.round(avgPct)}%
+          </div>
+        </div>
+        <div style={{ background: T.softYellow, borderRadius: 10, padding: 10 }}>
+          <div style={{ fontFamily: monoFont, fontSize: 10, color: T.inkSoft }}>LAST SCORE</div>
+          <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700, color: T.ink }}>
+            {attempts[0].score}/{attempts[0].maxScore}
+          </div>
+        </div>
+      </div>
+      {topWeak.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontFamily: monoFont, fontSize: 10, color: T.inkSoft, textTransform: "uppercase", marginBottom: 6 }}>
+            Often weak
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {topWeak.map(([name, n]) => (
+              <span
+                key={name}
+                style={{
+                  background: T.softRed,
+                  color: T.red,
+                  borderRadius: 16,
+                  padding: "5px 10px",
+                  fontFamily: bodyFont,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                {name} ×{n}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      <div style={{ fontFamily: monoFont, fontSize: 10, color: T.inkSoft, textTransform: "uppercase", marginBottom: 6 }}>
+        Recent attempts
+      </div>
+      <div style={{ display: "grid", gap: 6 }}>
+        {attempts.slice(0, 5).map((a) => (
+          <div
+            key={a.id}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 8,
+              flexWrap: "wrap",
+              padding: "8px 10px",
+              background: T.bg,
+              borderRadius: 8,
+              fontFamily: bodyFont,
+              fontSize: 12.5,
+              color: T.ink,
+            }}
+          >
+            <span>
+              <strong>{a.examName}</strong>
+              <span style={{ color: T.inkSoft }}> · {a.mode === "sectional" ? "sectional" : "full"}</span>
+            </span>
+            <span style={{ fontFamily: monoFont, fontWeight: 600 }}>
+              {a.score}/{a.maxScore}
+              <span style={{ color: T.inkSoft, fontWeight: 400 }}>
+                {" "}
+                · {a.at ? new Date(a.at).toLocaleDateString("en-IN") : ""}
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /* =========================================================
    EXAM DATA
@@ -550,6 +736,43 @@ const EXAMS = [
     ],
     officialWebsite: "https://neet.nta.nic.in/",
     notificationUrl: "https://neet.nta.nic.in/archive/",
+  },
+  {
+    id: "ibps-po",
+    shortName: "IBPS PO",
+    name: "IBPS Probationary Officer",
+    category: "Banking",
+    examDate: "2026-10-18",
+    applicationStart: "2026-07-01",
+    applicationEnd: "2026-07-28",
+    description: "Recruitment examination for Probationary Officers / Management Trainees in participating public sector banks.",
+    eligibility: {
+      education: "Graduate degree",
+      age: "20–30 years (relaxations as per rules)",
+      attempts: "As per IBPS notification",
+    },
+    stages: ["Prelims", "Mains", "Interview"],
+    syllabus: [
+      {
+        stage: "Prelims",
+        papers: [
+          {
+            name: "English Language",
+            topics: ["Reading comprehension", "Cloze test", "Error spotting", "Para jumbles", "Fillers"],
+          },
+          {
+            name: "Quantitative Aptitude",
+            topics: ["Simplification", "Number series", "Data interpretation", "Arithmetic word problems"],
+          },
+          {
+            name: "Reasoning Ability",
+            topics: ["Puzzles & seating", "Syllogism", "Inequality", "Coding-decoding", "Blood relations"],
+          },
+        ],
+      },
+    ],
+    officialWebsite: "https://www.ibps.in/",
+    notificationUrl: "https://www.ibps.in/",
   },
 ];
 
@@ -1202,6 +1425,37 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
 
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem("hallpass-theme") === "dark" ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  });
+  const T = THEMES[theme] || THEMES.light;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("hallpass-theme", theme);
+    } catch (_) {}
+    // Sync module-level C used by cards (best-effort for shared constants)
+    Object.assign(C, {
+      bg: T.bg,
+      surface: T.surface,
+      ink: T.ink,
+      inkSoft: T.inkSoft,
+      line: T.line,
+      red: T.red,
+      green: T.green,
+      yellow: T.yellow,
+      blue: T.blue,
+      softRed: T.softRed,
+      softGreen: T.softGreen,
+      softBlue: T.softBlue,
+      softYellow: T.softYellow,
+    });
+  }, [theme, T]);
+
   const [starred, setStarred] = useState(new Set());
   const [starLoaded, setStarLoaded] = useState(false);
 
@@ -1459,10 +1713,12 @@ export default function App() {
     <div
       style={{
         minHeight: "100vh",
-        background: `${OMR_BG}, ${C.bg}`,
+        background: `${T.omr}, ${C.bg}`,
         backgroundSize: "18px 18px, auto",
         fontFamily: bodyFont,
         padding: "clamp(18px, 5vw, 28px) clamp(12px, 4vw, 16px) 60px",
+        color: C.ink,
+        transition: "background 0.2s ease, color 0.2s ease",
       }}
     >
       <style>{`
@@ -1501,31 +1757,57 @@ export default function App() {
             alignItems: "center",
             justifyContent: "space-between",
             gap: 10,
+            flexWrap: "wrap",
           }}
         >
-          <div style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 120 }}>
             Signed in as <strong style={{ color: C.ink }}>{user.email}</strong>
           </div>
-          <button
-            onClick={async () => {
-              try { await signOut(auth); } catch (e) { console.error(e); }
-            }}
-            style={{
-              flexShrink: 0,
-              fontFamily: bodyFont,
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#fff",
-              background: C.red,
-              border: "none",
-              borderRadius: 7,
-              padding: "6px 11px",
-              cursor: "pointer",
-            }}
-          >
-            Logout
-          </button>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontFamily: bodyFont,
+                fontSize: 12,
+                fontWeight: 600,
+                color: C.ink,
+                background: C.bg,
+                border: `1px solid ${C.line}`,
+                borderRadius: 7,
+                padding: "6px 11px",
+                cursor: "pointer",
+              }}
+            >
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+              {theme === "dark" ? "Light" : "Dark"}
+            </button>
+            <button
+              onClick={async () => {
+                try { await signOut(auth); } catch (e) { console.error(e); }
+              }}
+              style={{
+                fontFamily: bodyFont,
+                fontSize: 12,
+                fontWeight: 600,
+                color: "#fff",
+                background: C.red,
+                border: "none",
+                borderRadius: 7,
+                padding: "6px 11px",
+                cursor: "pointer",
+              }}
+            >
+              Logout
+            </button>
+          </div>
         </div>
+
+        {view !== "detail" && <ProgressDashboard userId={user.uid} colors={C} />}
 
         {view === "detail" && selectedExam ? (
           <ExamDetail
