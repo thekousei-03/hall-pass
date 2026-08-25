@@ -67,7 +67,8 @@ const OMR_BG = `radial-gradient(circle, rgba(20,33,61,0.055) 1px, transparent 1p
 
 /* =========================================================
    EXAM DATA
-   Replace / expand this list with your actual exam data.
+   officialWebsite → main site
+   notificationUrl → official previous year papers / archive
 ========================================================= */
 const EXAMS = [
   {
@@ -176,7 +177,7 @@ const EXAMS = [
       },
     ],
     officialWebsite: "https://upsc.gov.in/",
-    notificationUrl: "https://upsc.gov.in/examinations",
+    notificationUrl: "https://www.upsc.gov.in/examinations/previous-question-papers",
   },
   {
     id: "ssc-cgl",
@@ -364,7 +365,7 @@ const EXAMS = [
       },
     ],
     officialWebsite: "https://gate2027.iitg.ac.in/",
-    notificationUrl: "https://gate2027.iitg.ac.in/",
+    notificationUrl: "https://gate2026.iitg.ac.in/download.html",
   },
   {
     id: "cat",
@@ -478,7 +479,7 @@ const EXAMS = [
       },
     ],
     officialWebsite: "https://neet.nta.nic.in/",
-    notificationUrl: "https://neet.nta.nic.in/",
+    notificationUrl: "https://neet.nta.nic.in/archive/",
   },
 ];
 
@@ -949,10 +950,13 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
                   fontWeight: 600,
                 }}
               >
-                Exam information
+                Previous year papers
                 <FileText size={14} />
               </a>
             </div>
+            <p style={{ marginTop: 10, fontFamily: bodyFont, fontSize: 11.5, color: C.inkSoft, lineHeight: 1.45 }}>
+              Official previous papers open on the exam authority’s site. Hall Pass mocks use original practice items — not copied past papers.
+            </p>
           </section>
         </div>
 
@@ -1018,10 +1022,6 @@ export default function App() {
 
   /* =======================================================
      LIVE NOTES (onSnapshot)
-     Keeps notes in sync in real time — across refreshes,
-     tabs, and devices — and surfaces read errors
-     (e.g. permission-denied from security rules)
-     instead of silently showing an empty list.
   ======================================================= */
   useEffect(() => {
     if (!user) {
@@ -1054,8 +1054,6 @@ export default function App() {
           setNotesError(null);
         },
         (error) => {
-          // This fires on permission-denied, offline, etc. —
-          // surfacing it turns a silent "notes vanished" into a diagnosable error.
           console.error("Error loading notes:", error);
           setNotesError(
             error.code === "permission-denied"
@@ -1066,8 +1064,6 @@ export default function App() {
         }
       );
     } catch (error) {
-      // Catches synchronous setup errors (e.g. a bad query call)
-      // so they can never crash the whole app.
       console.error("Error setting up notes listener:", error);
       setNotesError("Can't load notes right now. Please refresh the page.");
       setNotesLoading(false);
@@ -1078,8 +1074,6 @@ export default function App() {
 
   /* =======================================================
      LOAD STARRED EXAMS
-     Uses browser localStorage.
-     This avoids requiring Firestore for this feature.
   ======================================================= */
   useEffect(() => {
     if (!user) {
@@ -1123,8 +1117,6 @@ export default function App() {
           tags,
           updatedAt: serverTimestamp(),
         });
-        // No local setNotes needed — the onSnapshot listener
-        // above will pick up this write and update state automatically.
       } else {
         await addDoc(collection(db, "notes"), {
           userId: user.uid,
@@ -1134,8 +1126,6 @@ export default function App() {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-        // Same here — onSnapshot will add the new note to state
-        // once Firestore confirms the write.
       }
 
       setNoteTitle("");
@@ -1154,7 +1144,6 @@ export default function App() {
 
     try {
       await deleteDoc(doc(db, "notes", noteId));
-      // onSnapshot will remove it from state once the delete is confirmed.
 
       if (editingNote === noteId) {
         setEditingNote(null);

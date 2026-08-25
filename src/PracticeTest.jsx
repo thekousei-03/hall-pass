@@ -43,66 +43,76 @@ const EXAM_PATTERNS = {
     label: "SSC CGL Tier-I (full length)",
     totalTimeMin: 60,
     negativeMark: 0.5,
+    // Composite paper — free navigation; section times are soft guides
+    sectionalTimer: false,
     sections: [
-      { id: "reasoning", name: "General Intelligence & Reasoning", qCount: 25, marksEach: 2 },
-      { id: "ga", name: "General Awareness", qCount: 25, marksEach: 2 },
-      { id: "quant", name: "Quantitative Aptitude", qCount: 25, marksEach: 2 },
-      { id: "english", name: "English Comprehension", qCount: 25, marksEach: 2 },
+      { id: "reasoning", name: "General Intelligence & Reasoning", qCount: 25, marksEach: 2, timeMin: 15 },
+      { id: "ga", name: "General Awareness", qCount: 25, marksEach: 2, timeMin: 15 },
+      { id: "quant", name: "Quantitative Aptitude", qCount: 25, marksEach: 2, timeMin: 15 },
+      { id: "english", name: "English Comprehension", qCount: 25, marksEach: 2, timeMin: 15 },
     ],
   },
   cat: {
     label: "CAT (full-length practice)",
     totalTimeMin: 120,
     negativeMark: 1,
+    // Official CAT: 40 min per section, locked — cannot return
+    sectionalTimer: true,
     sections: [
-      { id: "varc", name: "VARC", qCount: 22, marksEach: 3 },
-      { id: "dilr", name: "DILR", qCount: 20, marksEach: 3 },
-      { id: "quant", name: "Quantitative Aptitude", qCount: 22, marksEach: 3 },
+      { id: "varc", name: "VARC", qCount: 22, marksEach: 3, timeMin: 40 },
+      { id: "dilr", name: "DILR", qCount: 20, marksEach: 3, timeMin: 40 },
+      { id: "quant", name: "Quantitative Aptitude", qCount: 22, marksEach: 3, timeMin: 40 },
     ],
   },
   "jee-main": {
     label: "JEE Main (full length)",
     totalTimeMin: 180,
     negativeMark: 1,
+    sectionalTimer: false,
     sections: [
-      { id: "physics", name: "Physics", qCount: 30, marksEach: 4 },
-      { id: "chemistry", name: "Chemistry", qCount: 30, marksEach: 4 },
-      { id: "maths", name: "Mathematics", qCount: 30, marksEach: 4 },
+      { id: "physics", name: "Physics", qCount: 30, marksEach: 4, timeMin: 60 },
+      { id: "chemistry", name: "Chemistry", qCount: 30, marksEach: 4, timeMin: 60 },
+      { id: "maths", name: "Mathematics", qCount: 30, marksEach: 4, timeMin: 60 },
     ],
   },
   "neet-ug": {
     label: "NEET UG (full length)",
     totalTimeMin: 200,
     negativeMark: 1,
+    sectionalTimer: false,
     sections: [
-      { id: "physics", name: "Physics", qCount: 45, marksEach: 4 },
-      { id: "chemistry", name: "Chemistry", qCount: 45, marksEach: 4 },
-      { id: "biology", name: "Biology", qCount: 90, marksEach: 4 },
+      { id: "physics", name: "Physics", qCount: 45, marksEach: 4, timeMin: 50 },
+      { id: "chemistry", name: "Chemistry", qCount: 45, marksEach: 4, timeMin: 50 },
+      { id: "biology", name: "Biology", qCount: 90, marksEach: 4, timeMin: 100 },
     ],
   },
   "upsc-cse": {
     label: "UPSC CSE Prelims GS (full length)",
     totalTimeMin: 120,
     negativeMark: 0.66,
-    sections: [{ id: "gs", name: "General Studies", qCount: 100, marksEach: 2 }],
+    sectionalTimer: false,
+    sections: [{ id: "gs", name: "General Studies", qCount: 100, marksEach: 2, timeMin: 120 }],
   },
   gate: {
     label: "GATE (full length)",
     totalTimeMin: 180,
     negativeMark: 0.33,
+    sectionalTimer: false,
     sections: [
-      { id: "ga", name: "General Aptitude", qCount: 10, marksEach: 1 },
-      { id: "core", name: "Core", qCount: 55, marksEach: 2 },
+      { id: "ga", name: "General Aptitude", qCount: 10, marksEach: 1, timeMin: 25 },
+      { id: "core", name: "Core", qCount: 55, marksEach: 2, timeMin: 155 },
     ],
   },
   "ibps-po": {
     label: "IBPS PO Prelims (full length)",
     totalTimeMin: 60,
     negativeMark: 0.25,
+    // Official-style: 20 min per section, locked
+    sectionalTimer: true,
     sections: [
-      { id: "english", name: "English Language", qCount: 30, marksEach: 1 },
-      { id: "quant", name: "Quantitative Aptitude", qCount: 35, marksEach: 1 },
-      { id: "reasoning", name: "Reasoning Ability", qCount: 35, marksEach: 1 },
+      { id: "english", name: "English Language", qCount: 30, marksEach: 1, timeMin: 20 },
+      { id: "quant", name: "Quantitative Aptitude", qCount: 35, marksEach: 1, timeMin: 20 },
+      { id: "reasoning", name: "Reasoning Ability", qCount: 35, marksEach: 1, timeMin: 20 },
     ],
   },
 };
@@ -1213,38 +1223,159 @@ function ResultsView({ exam, pattern, questions, answers, flagged, timeTakenSec,
 
 function LiveTest({ exam, paper, onSubmit, onAbort }) {
   const { pattern, questions } = paper;
+  const sections = pattern.sections || [];
+  const locked = !!pattern.sectionalTimer;
   const totalSec = pattern.totalTimeMin * 60;
+
+  // Question index ranges per section (questions are ordered by section in buildPaper)
+  const sectionRanges = useMemo(() => {
+    const ranges = [];
+    let start = 0;
+    sections.forEach((sec) => {
+      const count = questions.filter((q) => q.sectionId === sec.id).length;
+      ranges.push({
+        id: sec.id,
+        name: sec.name,
+        timeMin: sec.timeMin || Math.round(pattern.totalTimeMin / Math.max(sections.length, 1)),
+        start,
+        end: start + count - 1,
+        qCount: count,
+      });
+      start += count;
+    });
+    return ranges;
+  }, [sections, questions, pattern.totalTimeMin]);
+
+  const [sectionIdx, setSectionIdx] = useState(0);
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState({});
   const [flagged, setFlagged] = useState({});
   const [running, setRunning] = useState(true);
+  const [sectionFlash, setSectionFlash] = useState(null);
   const startRef = useRef(Date.now());
+  const answersRef = useRef(answers);
+  const flaggedRef = useRef(flagged);
+  answersRef.current = answers;
+  flaggedRef.current = flagged;
+
+  const currentRange = sectionRanges[sectionIdx] || sectionRanges[0];
+  const sectionSec = (currentRange?.timeMin || 0) * 60;
 
   const submit = useCallback(() => {
     setRunning(false);
     const timeTakenSec = Math.min(totalSec, Math.round((Date.now() - startRef.current) / 1000));
-    onSubmit({ answers, flagged, timeTakenSec });
-  }, [answers, flagged, onSubmit, totalSec]);
+    onSubmit({
+      answers: answersRef.current,
+      flagged: flaggedRef.current,
+      timeTakenSec,
+    });
+  }, [onSubmit, totalSec]);
 
-  const { display, left } = useTimer(totalSec, running, submit);
-  const timePct = totalSec > 0 ? Math.max(0, Math.min(100, (left / totalSec) * 100)) : 0;
-  const timerColor = left < 60 ? "#f0a0a0" : left < 300 ? "#f5d76e" : "#8fdfb0";
-  const barColor = left < 60 ? C.red : left < 300 ? C.yellow : C.green;
+  const advanceSection = useCallback(() => {
+    setSectionIdx((si) => {
+      const next = si + 1;
+      if (next >= sectionRanges.length) {
+        // Last section done → submit
+        setTimeout(() => submit(), 0);
+        return si;
+      }
+      const range = sectionRanges[next];
+      setIdx(range.start);
+      setSectionFlash(`Section time up — moved to ${range.name}`);
+      setTimeout(() => setSectionFlash(null), 3500);
+      return next;
+    });
+  }, [sectionRanges, submit]);
+
+  // Overall timer (always runs; auto-submit at 0)
+  const { display: overallDisplay, left: overallLeft } = useTimer(totalSec, running, submit);
+
+  // Section timer only when sectional lock is on (CAT / IBPS style)
+  const onSectionExpire = useCallback(() => {
+    if (!running || !locked) return;
+    advanceSection();
+  }, [running, locked, advanceSection]);
+
+  const { display: sectionDisplay, left: sectionLeft } = useTimer(
+    locked ? sectionSec : 0,
+    running && locked && !!currentRange,
+    onSectionExpire
+  );
+
+  // Keep idx inside current section when locked
+  useEffect(() => {
+    if (!locked || !currentRange) return;
+    if (idx < currentRange.start || idx > currentRange.end) {
+      setIdx(currentRange.start);
+    }
+  }, [locked, currentRange, idx]);
+
+  // Soft mode: follow the section of the question the user is on
+  useEffect(() => {
+    if (locked || !sectionRanges.length) return;
+    const found = sectionRanges.findIndex((r) => idx >= r.start && idx <= r.end);
+    if (found >= 0 && found !== sectionIdx) setSectionIdx(found);
+  }, [locked, idx, sectionRanges, sectionIdx]);
+
+  const timePct = totalSec > 0 ? Math.max(0, Math.min(100, (overallLeft / totalSec) * 100)) : 0;
+  const sectionPct =
+    locked && sectionSec > 0
+      ? Math.max(0, Math.min(100, (sectionLeft / sectionSec) * 100))
+      : timePct;
+  const primaryLeft = locked ? sectionLeft : overallLeft;
+  const timerColor =
+    primaryLeft < 60 ? "#f0a0a0" : primaryLeft < 300 ? "#f5d76e" : "#8fdfb0";
+  const barColor =
+    primaryLeft < 60 ? C.red : primaryLeft < 300 ? C.yellow : C.green;
 
   const qu = questions[idx];
   const answeredCount = Object.keys(answers).filter((k) => answers[k] != null).length;
+
+  const canGoPrev = locked
+    ? idx > (currentRange?.start ?? 0)
+    : idx > 0;
+  const canGoNext = locked
+    ? idx < (currentRange?.end ?? questions.length - 1)
+    : idx < questions.length - 1;
+
+  const goPrev = () => {
+    if (!canGoPrev) return;
+    setIdx((i) => i - 1);
+  };
+  const goNext = () => {
+    if (!canGoNext) return;
+    setIdx((i) => i + 1);
+  };
+
+  const jumpTo = (i) => {
+    if (locked && currentRange && (i < currentRange.start || i > currentRange.end)) return;
+    setIdx(i);
+  };
+
+  // Manual "Finish section" when locked (move early to next)
+  const finishSectionEarly = () => {
+    if (!locked) return;
+    if (sectionIdx >= sectionRanges.length - 1) {
+      if (window.confirm("This is the last section. Submit the mock test?")) submit();
+      return;
+    }
+    const next = sectionRanges[sectionIdx + 1];
+    if (
+      window.confirm(
+        `Finish "${currentRange?.name}" and start "${next.name}"? You cannot return to this section.`
+      )
+    ) {
+      setSectionIdx(sectionIdx + 1);
+      setIdx(next.start);
+    }
+  };
+
   if (!qu) return null;
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, overflow: "hidden" }}>
-      {/* TIMER BAR + countdown progress */}
-      <div
-        style={{
-          padding: "12px 16px 0",
-          background: C.ink,
-          color: "#fff",
-        }}
-      >
+      {/* TIMER BAR */}
+      <div style={{ padding: "12px 16px 0", background: C.ink, color: "#fff" }}>
         <div
           style={{
             display: "flex",
@@ -1258,23 +1389,54 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
           <div>
             <div style={{ fontFamily: monoFont, fontSize: 11, opacity: 0.7 }}>{pattern.label}</div>
             <div style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 16 }}>{exam.shortName} Mock</div>
+            {currentRange && sections.length > 1 && (
+              <div style={{ fontFamily: bodyFont, fontSize: 12, opacity: 0.8, marginTop: 4 }}>
+                Section {sectionIdx + 1}/{sections.length}: {currentRange.name}
+                {locked ? " · locked timer" : ""}
+              </div>
+            )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            {/* Section countdown — only when sectional lock is active */}
+            {locked && currentRange && (
+              <div style={{ textAlign: "right" }}>
+                <div
+                  style={{
+                    fontFamily: monoFont,
+                    fontSize: 22,
+                    fontWeight: 700,
+                    color: timerColor,
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  <Clock size={15} style={{ display: "inline", marginRight: 5, verticalAlign: -2 }} />
+                  {sectionDisplay}
+                </div>
+                <div style={{ fontSize: 10, opacity: 0.65 }}>
+                  Section · {Math.round(sectionPct)}% left
+                </div>
+              </div>
+            )}
+            {/* Overall timer */}
             <div style={{ textAlign: "right" }}>
               <div
                 style={{
                   fontFamily: monoFont,
-                  fontSize: 24,
+                  fontSize: locked ? 16 : 24,
                   fontWeight: 700,
-                  color: timerColor,
+                  color: locked ? "rgba(255,255,255,0.85)" : timerColor,
                   letterSpacing: 0.5,
                 }}
               >
-                <Clock size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -3 }} />
-                {display}
+                {!locked && (
+                  <Clock size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -3 }} />
+                )}
+                {overallDisplay}
               </div>
-              <div style={{ fontSize: 11, opacity: 0.65 }}>
-                {answeredCount}/{questions.length} answered · {Math.round(timePct)}% time left
+              <div style={{ fontSize: 10, opacity: 0.65 }}>
+                {locked
+                  ? "Overall"
+                  : `${answeredCount}/${questions.length} answered · ${Math.round(timePct)}% left`}
               </div>
             </div>
             <button
@@ -1297,25 +1459,104 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
             </button>
           </div>
         </div>
-        {/* Countdown progress bar */}
+
+        {/* Progress bar: section time when locked, overall otherwise */}
         <div
           style={{
             height: 5,
             background: "rgba(255,255,255,0.15)",
-            borderRadius: 0,
             overflow: "hidden",
           }}
         >
           <div
             style={{
               height: "100%",
-              width: `${timePct}%`,
+              width: `${locked ? sectionPct : timePct}%`,
               background: barColor,
               transition: "width 1s linear, background 0.3s ease",
             }}
           />
         </div>
-        {left < 60 && left > 0 && (
+
+        {/* Section chips */}
+        {sectionRanges.length > 1 && (
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              flexWrap: "wrap",
+              padding: "10px 0 8px",
+            }}
+          >
+            {sectionRanges.map((r, i) => {
+              const done = locked && i < sectionIdx;
+              const active = i === sectionIdx;
+              const answeredInSec = questions
+                .slice(r.start, r.end + 1)
+                .filter((q) => answers[q.uid] != null).length;
+              return (
+                <div
+                  key={r.id}
+                  style={{
+                    fontFamily: monoFont,
+                    fontSize: 10,
+                    padding: "4px 8px",
+                    borderRadius: 6,
+                    background: active
+                      ? "rgba(255,255,255,0.2)"
+                      : done
+                        ? "rgba(60,122,87,0.35)"
+                        : "rgba(255,255,255,0.08)",
+                    border: active ? "1px solid rgba(255,255,255,0.45)" : "1px solid transparent",
+                    opacity: done ? 0.75 : 1,
+                  }}
+                  title={
+                    locked
+                      ? done
+                        ? "Completed — locked"
+                        : active
+                          ? "Current section"
+                          : "Upcoming"
+                      : undefined
+                  }
+                >
+                  {r.name.length > 14 ? r.name.slice(0, 13) + "…" : r.name}
+                  {" · "}
+                  {answeredInSec}/{r.qCount}
+                  {done ? " ✓" : active ? ` · ${r.timeMin}m` : ` · ${r.timeMin}m`}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {sectionFlash && (
+          <div
+            style={{
+              fontFamily: bodyFont,
+              fontSize: 12,
+              color: "#f5d76e",
+              padding: "4px 0 8px",
+              textAlign: "center",
+            }}
+          >
+            {sectionFlash}
+          </div>
+        )}
+        {!sectionFlash && locked && sectionLeft < 60 && sectionLeft > 0 && (
+          <div
+            style={{
+              fontFamily: bodyFont,
+              fontSize: 11,
+              color: "#f0a0a0",
+              padding: "6px 0 8px",
+              textAlign: "center",
+            }}
+          >
+            Less than 1 minute in this section — auto-moves to next at 0:00
+          </div>
+        )}
+        {!sectionFlash && !locked && overallLeft < 60 && overallLeft > 0 && (
           <div
             style={{
               fontFamily: bodyFont,
@@ -1328,7 +1569,10 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
             Less than 1 minute left — test will auto-submit at 0:00
           </div>
         )}
-        {left >= 60 && <div style={{ height: 8 }} />}
+        {!sectionFlash &&
+          !(locked && sectionLeft < 60 && sectionLeft > 0) &&
+          !(!locked && overallLeft < 60 && overallLeft > 0) &&
+          sectionRanges.length <= 1 && <div style={{ height: 8 }} />}
       </div>
 
       <div style={{ padding: 16 }}>
@@ -1371,8 +1615,8 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
 
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           <button
-            onClick={() => setIdx((i) => Math.max(0, i - 1))}
-            disabled={idx === 0}
+            onClick={goPrev}
+            disabled={!canGoPrev}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -1381,8 +1625,8 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
               borderRadius: 8,
               border: `1px solid ${C.line}`,
               background: C.bg,
-              opacity: idx === 0 ? 0.5 : 1,
-              cursor: idx === 0 ? "default" : "pointer",
+              opacity: !canGoPrev ? 0.5 : 1,
+              cursor: !canGoPrev ? "default" : "pointer",
               fontFamily: bodyFont,
               fontSize: 13,
             }}
@@ -1414,8 +1658,8 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
             <Flag size={14} /> {flagged[qu.uid] ? "Flagged" : "Flag"}
           </button>
           <button
-            onClick={() => setIdx((i) => Math.min(questions.length - 1, i + 1))}
-            disabled={idx === questions.length - 1}
+            onClick={goNext}
+            disabled={!canGoNext}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -1424,8 +1668,8 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
               borderRadius: 8,
               border: `1px solid ${C.line}`,
               background: C.bg,
-              opacity: idx === questions.length - 1 ? 0.5 : 1,
-              cursor: idx === questions.length - 1 ? "default" : "pointer",
+              opacity: !canGoNext ? 0.5 : 1,
+              cursor: !canGoNext ? "default" : "pointer",
               fontFamily: bodyFont,
               fontSize: 13,
             }}
@@ -1434,26 +1678,77 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
           </button>
         </div>
 
-        <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, marginBottom: 6 }}>QUESTION PALETTE</div>
+        {locked && (
+          <button
+            type="button"
+            onClick={finishSectionEarly}
+            style={{
+              width: "100%",
+              marginBottom: 14,
+              padding: "9px 12px",
+              borderRadius: 8,
+              border: `1px solid ${C.line}`,
+              background: C.softBlue,
+              color: C.ink,
+              cursor: "pointer",
+              fontFamily: bodyFont,
+              fontSize: 12.5,
+              fontWeight: 600,
+            }}
+          >
+            {sectionIdx >= sectionRanges.length - 1
+              ? "Finish last section & submit"
+              : `Finish section → next (${sectionRanges[sectionIdx + 1]?.name || ""})`}
+          </button>
+        )}
+
+        <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, marginBottom: 6 }}>
+          QUESTION PALETTE
+          {locked ? " · current section only" : ""}
+        </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {questions.map((item, i) => {
             const answered = answers[item.uid] != null;
             const isFlag = flagged[item.uid];
             const isCurrent = i === idx;
+            const inCurrentSection =
+              !currentRange || (i >= currentRange.start && i <= currentRange.end);
+            const inPastSection =
+              locked && currentRange && i < currentRange.start;
+            const inFutureSection =
+              locked && currentRange && i > currentRange.end;
+            const disabled = locked && !inCurrentSection;
             return (
               <button
                 key={item.uid}
-                onClick={() => setIdx(i)}
+                onClick={() => jumpTo(i)}
+                disabled={disabled}
+                title={
+                  inPastSection
+                    ? "Section locked"
+                    : inFutureSection
+                      ? "Upcoming section"
+                      : undefined
+                }
                 style={{
                   width: 32,
                   height: 32,
                   borderRadius: 6,
                   border: isCurrent ? `2px solid ${C.ink}` : `1px solid ${C.line}`,
-                  background: isFlag ? C.softYellow : answered ? C.softGreen : C.bg,
+                  background: inPastSection
+                    ? "#e8e8e8"
+                    : inFutureSection
+                      ? C.bg
+                      : isFlag
+                        ? C.softYellow
+                        : answered
+                          ? C.softGreen
+                          : C.bg,
                   fontFamily: monoFont,
                   fontSize: 11,
-                  cursor: "pointer",
-                  color: C.ink,
+                  cursor: disabled ? "not-allowed" : "pointer",
+                  color: disabled ? C.inkSoft : C.ink,
+                  opacity: disabled ? 0.45 : 1,
                 }}
               >
                 {i + 1}
@@ -1462,10 +1757,14 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
           })}
         </div>
 
+        <div style={{ marginTop: 12, fontFamily: bodyFont, fontSize: 12, color: C.inkSoft }}>
+          {answeredCount}/{questions.length} answered overall
+        </div>
+
         <button
           onClick={onAbort}
           style={{
-            marginTop: 16,
+            marginTop: 12,
             background: "transparent",
             border: "none",
             color: C.red,
@@ -1506,6 +1805,11 @@ function MockLobby({ exam, selectedYear, onYearChange, onStart }) {
       <p style={{ margin: "0 0 14px", fontFamily: bodyFont, fontSize: 13, color: C.inkSoft, lineHeight: 1.55 }}>
         Real full-length pattern for {exam.shortName}. Pick a year to prefer that year’s style questions;
         shortfall is filled from other years. Original practice items (not verbatim past papers).
+        {pattern.sectionalTimer
+          ? " This exam uses section-wise timers — you cannot return to a finished section."
+          : pattern.sections?.length > 1
+            ? " Section times below are suggested pacing guides; navigation is free within the overall timer."
+            : ""}
       </p>
 
       {/* Year selector */}
@@ -1559,7 +1863,9 @@ function MockLobby({ exam, selectedYear, onYearChange, onStart }) {
           <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700 }}>{totalQ}</div>
         </div>
         <div style={{ background: C.softGreen, borderRadius: 10, padding: 10 }}>
-          <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft }}>TIMER</div>
+          <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft }}>
+            {pattern.sectionalTimer ? "SECTIONAL" : "TIMER"}
+          </div>
           <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700 }}>{pattern.totalTimeMin} min</div>
         </div>
         <div style={{ background: C.softYellow, borderRadius: 10, padding: 10 }}>
@@ -1587,11 +1893,13 @@ function MockLobby({ exam, selectedYear, onYearChange, onStart }) {
               color: C.inkSoft,
               padding: "4px 0",
               borderBottom: `1px solid ${C.line}`,
+              gap: 8,
             }}
           >
             <span style={{ color: C.ink }}>{s.name}</span>
-            <span style={{ fontFamily: monoFont }}>
+            <span style={{ fontFamily: monoFont, textAlign: "right" }}>
               {s.qCount} Q · +{s.marksEach}
+              {s.timeMin ? ` · ${s.timeMin} min` : ""}
               {yearNum ? ` · ${yearNum}: ${yPool}` : ` · pool ${pool}`}
             </span>
           </div>
