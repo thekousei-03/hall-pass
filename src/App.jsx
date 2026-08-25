@@ -43,6 +43,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { subscribeExams } from "./services/examService";
+import { SEED_EXAMS } from "./data/seedExamsData";
+
 /* =========================================================
    FONTS & COLORS
 ========================================================= */
@@ -86,7 +89,6 @@ const THEMES = {
     softGreen: "#e5f1e9",
     softBlue: "#e8eef8",
     softYellow: "#f8efd9",
-    // Fixed brand navy for headers / primary actions (never flips with text color)
     primary: "#14213d",
     onPrimary: "#ffffff",
     omr: OMR_BG,
@@ -122,7 +124,6 @@ function ProgressDashboard({ userId, colors }) {
     setAttempts(loadProgress(userId));
   }, [userId]);
 
-  // Refresh when window regains focus (after a mock)
   useEffect(() => {
     const onFocus = () => setAttempts(loadProgress(userId));
     window.addEventListener("focus", onFocus);
@@ -142,7 +143,9 @@ function ProgressDashboard({ userId, colors }) {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <TrendingUp size={20} color={T.ink} />
-          <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: T.ink }}>Your progress</h2>
+          <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: T.ink }}>
+            Your progress
+          </h2>
         </div>
         <p style={{ margin: 0, fontFamily: bodyFont, fontSize: 13, color: T.inkSoft, lineHeight: 1.5 }}>
           Complete a full or sectional mock to see scores, accuracy, and weak sections here.
@@ -152,7 +155,8 @@ function ProgressDashboard({ userId, colors }) {
   }
 
   const avgPct =
-    attempts.reduce((a, x) => a + (x.maxScore ? (x.score / x.maxScore) * 100 : 0), 0) / attempts.length;
+    attempts.reduce((a, x) => a + (x.maxScore ? (x.score / x.maxScore) * 100 : 0), 0) /
+    attempts.length;
   const weakMap = {};
   attempts.forEach((a) => {
     (a.weakSections || []).forEach((w) => {
@@ -175,12 +179,23 @@ function ProgressDashboard({ userId, colors }) {
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <TrendingUp size={20} color={T.ink} />
-        <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: T.ink }}>Your progress</h2>
+        <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: T.ink }}>
+          Your progress
+        </h2>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8, marginBottom: 14 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))",
+          gap: 8,
+          marginBottom: 14,
+        }}
+      >
         <div style={{ background: T.softBlue, borderRadius: 10, padding: 10 }}>
           <div style={{ fontFamily: monoFont, fontSize: 10, color: T.inkSoft }}>MOCKS</div>
-          <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700, color: T.ink }}>{attempts.length}</div>
+          <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700, color: T.ink }}>
+            {attempts.length}
+          </div>
         </div>
         <div style={{ background: T.softGreen, borderRadius: 10, padding: 10 }}>
           <div style={{ fontFamily: monoFont, fontSize: 10, color: T.inkSoft }}>AVG %</div>
@@ -197,7 +212,15 @@ function ProgressDashboard({ userId, colors }) {
       </div>
       {topWeak.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontFamily: monoFont, fontSize: 10, color: T.inkSoft, textTransform: "uppercase", marginBottom: 6 }}>
+          <div
+            style={{
+              fontFamily: monoFont,
+              fontSize: 10,
+              color: T.inkSoft,
+              textTransform: "uppercase",
+              marginBottom: 6,
+            }}
+          >
             Often weak
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -220,7 +243,15 @@ function ProgressDashboard({ userId, colors }) {
           </div>
         </div>
       )}
-      <div style={{ fontFamily: monoFont, fontSize: 10, color: T.inkSoft, textTransform: "uppercase", marginBottom: 6 }}>
+      <div
+        style={{
+          fontFamily: monoFont,
+          fontSize: 10,
+          color: T.inkSoft,
+          textTransform: "uppercase",
+          marginBottom: 6,
+        }}
+      >
         Recent attempts
       </div>
       <div style={{ display: "grid", gap: 6 }}>
@@ -242,7 +273,10 @@ function ProgressDashboard({ userId, colors }) {
           >
             <span>
               <strong>{a.examName}</strong>
-              <span style={{ color: T.inkSoft }}> · {a.mode === "sectional" ? "sectional" : "full"}</span>
+              <span style={{ color: T.inkSoft }}>
+                {" "}
+                · {a.mode === "sectional" ? "sectional" : "full"}
+              </span>
             </span>
             <span style={{ fontFamily: monoFont, fontWeight: 600 }}>
               {a.score}/{a.maxScore}
@@ -257,531 +291,6 @@ function ProgressDashboard({ userId, colors }) {
     </div>
   );
 }
-
-/* =========================================================
-   EXAM DATA
-   officialWebsite → main site
-   notificationUrl → official previous year papers / archive
-========================================================= */
-const EXAMS = [
-  {
-    id: "upsc-cse",
-    shortName: "UPSC CSE",
-    name: "Civil Services Examination",
-    category: "UPSC",
-    examDate: "2027-05-30",
-    applicationStart: "2027-02-10",
-    applicationEnd: "2027-02-28",
-    description: "India's premier civil services examination conducted by the Union Public Service Commission.",
-    eligibility: {
-      education: "Graduate degree",
-      age: "21–32 years",
-      attempts: "Varies by category",
-    },
-    stages: ["Preliminary Examination", "Main Examination", "Personality Test"],
-    syllabus: [
-      {
-        stage: "Prelims",
-        papers: [
-          {
-            name: "GS Paper I",
-            topics: [
-              "Current events of national & international importance",
-              "History of India & Indian National Movement",
-              "Indian & World Geography (Physical, Social, Economic)",
-              "Indian Polity & Governance — Constitution, Political System, Panchayati Raj, Rights",
-              "Economic & Social Development — Sustainable Development, Poverty, Inclusion",
-              "Environmental ecology, Biodiversity & Climate Change",
-              "General Science",
-            ],
-          },
-          {
-            name: "CSAT (Paper II) — Qualifying",
-            topics: [
-              "Comprehension",
-              "Interpersonal skills including communication skills",
-              "Logical reasoning & analytical ability",
-              "Decision making & problem solving",
-              "General mental ability",
-              "Basic numeracy (Class X level) & Data interpretation",
-            ],
-          },
-        ],
-      },
-      {
-        stage: "Mains",
-        papers: [
-          {
-            name: "Essay",
-            topics: ["Two essays (~1000 words each) from philosophical, governance, society, technology & current-event themes"],
-          },
-          {
-            name: "GS-I — Heritage, History, Geography, Society",
-            topics: [
-              "Indian culture — art forms, literature, architecture",
-              "Modern Indian history (mid-18th century onwards)",
-              "Freedom struggle — stages & contributors",
-              "Post-independence consolidation",
-              "History of the world (18th century events, industrial revolution, world wars, etc.)",
-              "Indian society — diversity, role of women, poverty, urbanization",
-              "World & Indian geography — physical, resources, industries",
-            ],
-          },
-          {
-            name: "GS-II — Governance, Constitution, Polity, Social Justice, IR",
-            topics: [
-              "Indian Constitution — evolution, features, amendments, basic structure",
-              "Functions & responsibilities of Union & States; federal issues",
-              "Separation of powers, dispute redressal mechanisms",
-              "Parliament & State legislatures; Executive & Judiciary",
-              "Statutory, regulatory & quasi-judicial bodies",
-              "Government policies & interventions for development",
-              "Welfare schemes, social sector, health, education, HRD",
-              "International relations — India & neighbourhood, bilateral/global groupings",
-            ],
-          },
-          {
-            name: "GS-III — Technology, Economy, Biodiversity, Security, Disaster Mgmt",
-            topics: [
-              "Indian economy — planning, growth, employment, inclusive growth",
-              "Agriculture, food processing, land reforms",
-              "Science & technology developments; indigenization",
-              "Environment, biodiversity, climate change, conservation",
-              "Disaster management",
-              "Internal security — extremism, cyber security, border management",
-            ],
-          },
-          {
-            name: "GS-IV — Ethics, Integrity & Aptitude",
-            topics: [
-              "Ethics & human interface — essence, determinants, consequences",
-              "Attitude, aptitude, emotional intelligence",
-              "Moral thinkers & philosophers (India & world)",
-              "Public/Civil service values & ethics in public administration",
-              "Probity in governance, RTI, codes of ethics/conduct",
-              "Case studies on above issues",
-            ],
-          },
-          {
-            name: "Optional Subject (2 papers)",
-            topics: ["One optional subject chosen from the official list of ~48 subjects (literature & non-literature)"],
-          },
-        ],
-      },
-    ],
-    officialWebsite: "https://upsc.gov.in/",
-    notificationUrl: "https://www.upsc.gov.in/examinations/previous-question-papers",
-  },
-  {
-    id: "ssc-cgl",
-    shortName: "SSC CGL",
-    name: "Combined Graduate Level Examination",
-    category: "SSC",
-    examDate: "2027-06-15",
-    applicationStart: "2027-03-15",
-    applicationEnd: "2027-04-10",
-    description: "A major recruitment examination for Group B and Group C posts in the Government of India.",
-    eligibility: {
-      education: "Graduate degree",
-      age: "18–32 years depending on post",
-      attempts: "No fixed attempt limit",
-    },
-    stages: ["Tier-I", "Tier-II", "Document Verification"],
-    syllabus: [
-      {
-        stage: "Tier I",
-        papers: [
-          {
-            name: "General Intelligence & Reasoning",
-            topics: [
-              "Analogy, Classification, Series (number/figural)",
-              "Coding-Decoding, Blood Relations, Direction Sense",
-              "Venn Diagrams, Syllogism, Statement–Conclusion",
-              "Paper folding/cutting, Embedded figures, Matrix",
-              "Order & Ranking, Puzzles",
-            ],
-          },
-          {
-            name: "General Awareness",
-            topics: [
-              "Current events (national & international)",
-              "Indian History, Geography, Polity & Constitution",
-              "Economy, Budget, Government schemes",
-              "General Science & Everyday Science",
-              "Environment, Ecology, Sports, Awards, Books",
-            ],
-          },
-          {
-            name: "Quantitative Aptitude",
-            topics: [
-              "Number System, Simplification, LCM/HCF",
-              "Percentage, Ratio & Proportion, Average",
-              "Profit & Loss, Discount, SI & CI",
-              "Time & Work, Time-Speed-Distance, Mixture",
-              "Algebra, Geometry, Mensuration, Trigonometry",
-              "Data Interpretation (tables, graphs)",
-            ],
-          },
-          {
-            name: "English Comprehension",
-            topics: [
-              "Reading Comprehension, Cloze Test",
-              "Error Spotting, Sentence Improvement",
-              "Synonyms, Antonyms, Idioms & Phrases",
-              "One-word substitution, Fill in the blanks",
-              "Para Jumbles, Active/Passive, Direct/Indirect",
-            ],
-          },
-        ],
-      },
-      {
-        stage: "Tier II (Paper I — compulsory)",
-        papers: [
-          {
-            name: "Mathematical Abilities",
-            topics: ["Advanced Arithmetic, Algebra, Geometry, Mensuration", "Trigonometry, Statistics, Probability, Data Interpretation"],
-          },
-          {
-            name: "Reasoning & General Intelligence",
-            topics: ["Higher-order puzzles, seating arrangements, critical thinking, emotional & social intelligence"],
-          },
-          {
-            name: "English Language & Comprehension",
-            topics: ["Longer RC passages, para-jumbles, advanced grammar, complex cloze tests"],
-          },
-          {
-            name: "General Awareness",
-            topics: ["Static GK + recent current affairs (deeper than Tier I)"],
-          },
-          {
-            name: "Computer Knowledge + DEST",
-            topics: ["Computer basics, OS, MS Office, Internet, Networking; Data Entry Speed Test (qualifying)"],
-          },
-        ],
-      },
-    ],
-    officialWebsite: "https://ssc.gov.in/",
-    notificationUrl: "https://ssc.gov.in/for-candidates/previous-year-question-paper",
-  },
-  {
-    id: "jee-main",
-    shortName: "JEE Main",
-    name: "Joint Entrance Examination Main",
-    category: "Engineering",
-    examDate: "2027-01-20",
-    applicationStart: "2026-10-01",
-    applicationEnd: "2026-11-15",
-    description: "A national-level entrance examination for undergraduate engineering and related programs.",
-    eligibility: {
-      education: "Class 12 or equivalent",
-      age: "No specific age limit",
-      attempts: "As specified by NTA",
-    },
-    stages: ["Computer Based Test", "Result", "Counselling"],
-    syllabus: [
-      {
-        stage: "Paper 1 (B.E./B.Tech)",
-        papers: [
-          {
-            name: "Physics",
-            topics: [
-              "Units & Measurements, Kinematics, Laws of Motion",
-              "Work, Energy & Power, Rotational Motion, Gravitation",
-              "Properties of Solids & Liquids, Thermodynamics, Kinetic Theory",
-              "Oscillations & Waves",
-              "Electrostatics, Current Electricity, Magnetic Effects",
-              "EMI & AC, Electromagnetic Waves, Optics",
-              "Dual Nature of Matter, Atoms & Nuclei, Electronic Devices",
-              "Experimental Skills",
-            ],
-          },
-          {
-            name: "Chemistry",
-            topics: [
-              "Physical: Basic Concepts, Atomic Structure, Chemical Bonding, Thermodynamics, Equilibrium, Redox & Electrochemistry, Chemical Kinetics, Solutions, Surface Chemistry",
-              "Inorganic: Periodic Table, s/p/d/f-Block, Coordination Compounds, Isolation of Metals",
-              "Organic: Basic Principles, Hydrocarbons, Haloalkanes/Haloarenes, Alcohols/Phenols/Ethers, Aldehydes/Ketones/Carboxylic Acids, Amines, Biomolecules, Polymers",
-            ],
-          },
-          {
-            name: "Mathematics",
-            topics: [
-              "Sets, Relations & Functions; Complex Numbers & Quadratic Equations",
-              "Matrices & Determinants; Permutations & Combinations; Binomial Theorem",
-              "Sequences & Series; Limits, Continuity & Differentiability",
-              "Integral Calculus; Differential Equations",
-              "Coordinate Geometry (2D); Three-Dimensional Geometry; Vector Algebra",
-              "Statistics & Probability; Trigonometry",
-            ],
-          },
-        ],
-      },
-    ],
-    officialWebsite: "https://jeemain.nta.nic.in/",
-    notificationUrl: "https://www.nta.ac.in/Downloads",
-  },
-  {
-    id: "gate",
-    shortName: "GATE",
-    name: "Graduate Aptitude Test in Engineering",
-    category: "Engineering",
-    examDate: "2027-02-07",
-    applicationStart: "2026-08-25",
-    applicationEnd: "2026-10-01",
-    description: "A national examination used for postgraduate admissions and recruitment opportunities in engineering and science.",
-    eligibility: {
-      education: "Undergraduate degree or currently pursuing eligible degree",
-      age: "No age limit",
-      attempts: "No attempt limit",
-    },
-    stages: ["Computer Based Test", "Score", "Admission / Recruitment"],
-    syllabus: [
-      {
-        stage: "Common to all papers",
-        papers: [
-          {
-            name: "General Aptitude (GA) — 15 marks",
-            topics: [
-              "Verbal Ability — English grammar, sentence completion, verbal analogies, word groups, instructions, critical reasoning, verbal deduction",
-              "Numerical Ability — Numerical computation, numerical estimation, numerical reasoning, data interpretation",
-            ],
-          },
-          {
-            name: "Engineering Mathematics (most engineering papers)",
-            topics: [
-              "Linear Algebra — matrices, determinants, systems of linear equations, eigenvalues/eigenvectors",
-              "Calculus — limits, continuity, differentiation, integration, maxima/minima, multiple integrals, vector calculus",
-              "Differential Equations — first order, higher order linear ODEs, partial differential equations (intro)",
-              "Complex Variables — analytic functions, Cauchy’s theorem/integral, Taylor & Laurent series, residues",
-              "Probability & Statistics — mean, median, mode, standard deviation, random variables, distributions, hypothesis testing",
-              "Numerical Methods — interpolation, numerical integration, solutions of linear/non-linear equations",
-            ],
-          },
-        ],
-      },
-      {
-        stage: "Major paper codes (core outline)",
-        papers: [
-          {
-            name: "CS — Computer Science & Information Technology",
-            topics: [
-              "Digital Logic, Computer Organization & Architecture",
-              "Programming & Data Structures, Algorithms",
-              "Theory of Computation, Compiler Design",
-              "Operating Systems, Databases",
-              "Computer Networks",
-              "Software Engineering, Discrete Mathematics",
-            ],
-          },
-          {
-            name: "ME — Mechanical Engineering",
-            topics: [
-              "Engineering Mechanics, Strength of Materials, Theory of Machines",
-              "Vibrations, Machine Design",
-              "Fluid Mechanics, Heat Transfer, Thermodynamics",
-              "Applications (Power Engineering, IC Engines, Refrigeration & AC, Turbomachinery)",
-              "Manufacturing Engineering, Industrial Engineering",
-            ],
-          },
-          {
-            name: "EE — Electrical Engineering",
-            topics: [
-              "Electric Circuits, Electromagnetic Fields",
-              "Signals & Systems, Electrical Machines",
-              "Power Systems, Control Systems",
-              "Electrical & Electronic Measurements",
-              "Analog & Digital Electronics, Power Electronics",
-            ],
-          },
-          {
-            name: "EC — Electronics & Communication",
-            topics: [
-              "Networks, Signals & Systems, Electronic Devices",
-              "Analog Circuits, Digital Circuits",
-              "Control Systems, Communications",
-              "Electromagnetics",
-              "Engineering Mathematics as applicable",
-            ],
-          },
-          {
-            name: "CE — Civil Engineering",
-            topics: [
-              "Engineering Mathematics, Structural Engineering",
-              "Geotechnical Engineering, Water Resources",
-              "Environmental Engineering",
-              "Transportation Engineering",
-              "Geomatics Engineering",
-            ],
-          },
-          {
-            name: "Other papers (examples)",
-            topics: [
-              "CH Chemical · BT Biotechnology · IN Instrumentation · AE Aerospace",
-              "PI Production & Industrial · MT Metallurgical · PE Petroleum · TF Textile",
-              "PH Physics · CY Chemistry · MA Mathematics · ST Statistics · XE / XL multi-section",
-              "Full syllabus for every paper code is in the official GATE brochure — always verify there",
-            ],
-          },
-        ],
-      },
-    ],
-    officialWebsite: "https://gate2027.iitg.ac.in/",
-    notificationUrl: "https://gate2026.iitg.ac.in/download.html",
-  },
-  {
-    id: "cat",
-    shortName: "CAT",
-    name: "Common Admission Test",
-    category: "Management",
-    examDate: "2026-11-29",
-    applicationStart: "2026-08-01",
-    applicationEnd: "2026-09-15",
-    description: "A national-level management entrance examination primarily used by IIMs and other business schools.",
-    eligibility: {
-      education: "Bachelor's degree",
-      age: "No age limit",
-      attempts: "No attempt limit",
-    },
-    stages: ["Computer Based Test", "Shortlisting", "Further admission process"],
-    syllabus: [
-      {
-        stage: "Three sections (40 min each)",
-        papers: [
-          {
-            name: "VARC — Verbal Ability & Reading Comprehension",
-            topics: [
-              "Reading Comprehension (inference, specific detail, tone, critical analysis)",
-              "Para Jumbles / Jumbled Paragraphs",
-              "Para Summary",
-              "Odd Sentence Out",
-              "Verbal reasoning & logic (no direct grammar/spelling questions)",
-            ],
-          },
-          {
-            name: "DILR — Data Interpretation & Logical Reasoning",
-            topics: [
-              "Tables, Bar/Line/Pie/Column graphs, Caselets, Venn diagrams",
-              "Seating arrangements (linear/circular), Blood relations, Puzzles",
-              "Binary logic, Games & tournaments, Routes & networks",
-              "Data sufficiency, Sets, Ranking & ordering",
-            ],
-          },
-          {
-            name: "Quantitative Aptitude",
-            topics: [
-              "Arithmetic: Percentages, Ratio & Proportion, Averages, Profit & Loss, SI/CI, Time-Speed-Distance, Time & Work, Mixtures",
-              "Algebra: Equations, Inequalities, Functions, Logarithms, Progressions",
-              "Geometry & Mensuration: Triangles, Circles, Polygons, 2D/3D figures",
-              "Number System, Modern Math (Probability, Permutation & Combination, Set Theory)",
-            ],
-          },
-        ],
-      },
-    ],
-    officialWebsite: "https://iimcat.ac.in/",
-    // Official CAT past papers are released mainly for candidates who appeared (login on iimcat.ac.in).
-    // NTA-style bulk archive is not public; this points students to the official CAT portal to find papers/mock.
-    notificationUrl: "https://iimcat.ac.in/",
-  },
-  {
-    id: "neet-ug",
-    shortName: "NEET UG",
-    name: "National Eligibility cum Entrance Test",
-    category: "Medical",
-    examDate: "2027-05-02",
-    applicationStart: "2027-02-01",
-    applicationEnd: "2027-03-15",
-    description: "The national entrance examination for undergraduate medical education in India.",
-    eligibility: {
-      education: "10+2 with required subjects",
-      age: "As specified by NTA",
-      attempts: "As specified by NTA",
-    },
-    stages: ["Entrance Examination", "Result", "Counselling"],
-    syllabus: [
-      {
-        stage: "Single paper (PCB)",
-        papers: [
-          {
-            name: "Physics",
-            topics: [
-              "Physics & Measurement, Kinematics, Laws of Motion",
-              "Work, Energy & Power, Rotational Motion, Gravitation",
-              "Properties of Solids & Liquids, Thermodynamics, Kinetic Theory",
-              "Oscillations & Waves",
-              "Electrostatics, Current Electricity, Magnetic Effects & Magnetism",
-              "EMI & Alternating Currents, Electromagnetic Waves, Optics",
-              "Dual Nature of Matter & Radiation, Atoms & Nuclei, Electronic Devices",
-              "Experimental Skills",
-            ],
-          },
-          {
-            name: "Chemistry",
-            topics: [
-              "Physical: Basic Concepts, Atomic Structure, Chemical Bonding, Thermodynamics, Solutions, Equilibrium, Redox & Electrochemistry, Chemical Kinetics",
-              "Inorganic: Classification of Elements & Periodicity, p-Block, d- & f-Block, Coordination Compounds",
-              "Organic: Purification & Characterisation, Basic Principles, Hydrocarbons, Compounds containing Halogens/Oxygen/Nitrogen, Biomolecules",
-            ],
-          },
-          {
-            name: "Biology (Botany + Zoology)",
-            topics: [
-              "Diversity in the Living World",
-              "Structural Organisation in Animals & Plants",
-              "Cell Structure & Function",
-              "Plant Physiology",
-              "Human Physiology",
-              "Reproduction",
-              "Genetics & Evolution",
-              "Biology & Human Welfare",
-              "Biotechnology & Its Applications",
-              "Ecology & Environment",
-            ],
-          },
-        ],
-      },
-    ],
-    officialWebsite: "https://neet.nta.nic.in/",
-    notificationUrl: "https://neet.nta.nic.in/archive/",
-  },
-  {
-    id: "ibps-po",
-    shortName: "IBPS PO",
-    name: "IBPS Probationary Officer",
-    category: "Banking",
-    examDate: "2026-10-18",
-    applicationStart: "2026-07-01",
-    applicationEnd: "2026-07-28",
-    description: "Recruitment examination for Probationary Officers / Management Trainees in participating public sector banks.",
-    eligibility: {
-      education: "Graduate degree",
-      age: "20–30 years (relaxations as per rules)",
-      attempts: "As per IBPS notification",
-    },
-    stages: ["Prelims", "Mains", "Interview"],
-    syllabus: [
-      {
-        stage: "Prelims",
-        papers: [
-          {
-            name: "English Language",
-            topics: ["Reading comprehension", "Cloze test", "Error spotting", "Para jumbles", "Fillers"],
-          },
-          {
-            name: "Quantitative Aptitude",
-            topics: ["Simplification", "Number series", "Data interpretation", "Arithmetic word problems"],
-          },
-          {
-            name: "Reasoning Ability",
-            topics: ["Puzzles & seating", "Syllogism", "Inequality", "Coding-decoding", "Blood relations"],
-          },
-        ],
-      },
-    ],
-    officialWebsite: "https://www.ibps.in/",
-    notificationUrl: "https://www.ibps.in/",
-  },
-];
 
 /* =========================================================
    HELPERS
@@ -813,16 +322,15 @@ function getCountdownText(days) {
 /* =========================================================
    HERO
 ========================================================= */
-function HeroPass({ trackedCount }) {
+function HeroPass({ trackedCount, exams }) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  // Exam dates for calendar markers
   const examByDate = (() => {
     const map = {};
-    EXAMS.forEach((e) => {
+    (exams || []).forEach((e) => {
       if (!e.examDate) return;
-      const key = e.examDate; // YYYY-MM-DD
+      const key = e.examDate;
       if (!map[key]) map[key] = [];
       map[key].push(e.shortName);
     });
@@ -864,13 +372,29 @@ function HeroPass({ trackedCount }) {
         }}
       />
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 15, position: "relative", zIndex: 1 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 15,
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 7 }}>
             <Ticket size={27} />
             <div style={{ fontFamily: displayFont, fontSize: 27, fontWeight: 700 }}>Hall Pass</div>
           </div>
-          <div style={{ fontFamily: bodyFont, fontSize: 13, color: "rgba(255,255,255,0.72)", maxWidth: 430 }}>
+          <div
+            style={{
+              fontFamily: bodyFont,
+              fontSize: 13,
+              color: "rgba(255,255,255,0.72)",
+              maxWidth: 430,
+            }}
+          >
             Your simple dashboard for tracking important competitive exams.
           </div>
         </div>
@@ -886,7 +410,9 @@ function HeroPass({ trackedCount }) {
           }}
         >
           <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700 }}>{trackedCount}</div>
-          <div style={{ fontFamily: bodyFont, fontSize: 10, color: "rgba(255,255,255,0.65)" }}>TRACKED</div>
+          <div style={{ fontFamily: bodyFont, fontSize: 10, color: "rgba(255,255,255,0.65)" }}>
+            TRACKED
+          </div>
         </div>
       </div>
 
@@ -1025,7 +551,15 @@ function HeroPass({ trackedCount }) {
               return <span className="hp-cal-dot" title={examByDate[key].join(", ")} />;
             }}
           />
-          <div style={{ marginTop: 14, textAlign: "center", fontFamily: bodyFont, fontWeight: 600, color: C.ink }}>
+          <div
+            style={{
+              marginTop: 14,
+              textAlign: "center",
+              fontFamily: bodyFont,
+              fontWeight: 600,
+              color: C.ink,
+            }}
+          >
             {selectedDate.toLocaleDateString("en-IN", {
               weekday: "long",
               day: "numeric",
@@ -1047,7 +581,15 @@ function HeroPass({ trackedCount }) {
               Exam day: {examsOnSelected.join(" · ")}
             </div>
           ) : (
-            <div style={{ marginTop: 6, textAlign: "center", fontFamily: bodyFont, fontSize: 12, color: C.inkSoft }}>
+            <div
+              style={{
+                marginTop: 6,
+                textAlign: "center",
+                fontFamily: bodyFont,
+                fontSize: 12,
+                color: C.inkSoft,
+              }}
+            >
               No tracked exam on this date. Red dots mark exam days.
             </div>
           )}
@@ -1076,13 +618,29 @@ function ExamCard({ exam, starred, onToggleStar, onOpen }) {
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
         <div>
-          <div style={{ fontFamily: monoFont, fontSize: 10, textTransform: "uppercase", color: C.inkSoft, marginBottom: 5 }}>
+          <div
+            style={{
+              fontFamily: monoFont,
+              fontSize: 10,
+              textTransform: "uppercase",
+              color: C.inkSoft,
+              marginBottom: 5,
+            }}
+          >
             {exam.category}
           </div>
           <div style={{ fontFamily: displayFont, fontSize: 20, fontWeight: 700, color: C.ink }}>
             {exam.shortName}
           </div>
-          <div style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft, marginTop: 3, lineHeight: 1.4 }}>
+          <div
+            style={{
+              fontFamily: bodyFont,
+              fontSize: 12.5,
+              color: C.inkSoft,
+              marginTop: 3,
+              lineHeight: 1.4,
+            }}
+          >
             {exam.name}
           </div>
         </div>
@@ -1091,7 +649,13 @@ function ExamCard({ exam, starred, onToggleStar, onOpen }) {
           className="hp-tap"
           onClick={() => onToggleStar(exam.id)}
           aria-label={starred ? `Unstar ${exam.shortName}` : `Star ${exam.shortName}`}
-          style={{ border: "none", background: "transparent", cursor: "pointer", color: starred ? C.yellow : C.inkSoft, padding: 0 }}
+          style={{
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            color: starred ? C.yellow : C.inkSoft,
+            padding: 0,
+          }}
         >
           <Star size={20} fill={starred ? C.yellow : "none"} />
         </button>
@@ -1101,13 +665,31 @@ function ExamCard({ exam, starred, onToggleStar, onOpen }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <div style={{ fontFamily: monoFont, fontSize: 9.5, color: C.inkSoft, textTransform: "uppercase" }}>Exam date</div>
+          <div
+            style={{
+              fontFamily: monoFont,
+              fontSize: 9.5,
+              color: C.inkSoft,
+              textTransform: "uppercase",
+            }}
+          >
+            Exam date
+          </div>
           <div style={{ fontFamily: bodyFont, fontSize: 13, fontWeight: 600, color: C.ink, marginTop: 3 }}>
             {formatDate(exam.examDate)}
           </div>
         </div>
         <div>
-          <div style={{ fontFamily: monoFont, fontSize: 9.5, color: C.inkSoft, textTransform: "uppercase" }}>Countdown</div>
+          <div
+            style={{
+              fontFamily: monoFont,
+              fontSize: 9.5,
+              color: C.inkSoft,
+              textTransform: "uppercase",
+            }}
+          >
+            Countdown
+          </div>
           <div
             style={{
               fontFamily: monoFont,
@@ -1157,12 +739,23 @@ function SyllabusPanel({ exam }) {
 
   return (
     <section style={{ marginBottom: 22 }}>
-      <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 8px", color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
+      <h2
+        style={{
+          fontFamily: displayFont,
+          fontSize: 18,
+          margin: "0 0 8px",
+          color: C.ink,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
         <List size={18} color={C.inkSoft} />
         Syllabus breakdown
       </h2>
       <div style={{ fontFamily: bodyFont, fontSize: 12, color: C.inkSoft, marginBottom: 12 }}>
-        Official topic outlines by stage. Always cross-check the latest notification on the official site.
+        Official topic outlines by stage. Always cross-check the latest notification on the official
+        site.
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1171,7 +764,15 @@ function SyllabusPanel({ exam }) {
             const key = `${stage.stage}-${pi}`;
             const isOpen = openKey === key;
             return (
-              <div key={key} style={{ border: `1px solid ${C.line}`, overflow: "hidden", background: C.surface, borderRadius: 10 }}>
+              <div
+                key={key}
+                style={{
+                  border: `1px solid ${C.line}`,
+                  overflow: "hidden",
+                  background: C.surface,
+                  borderRadius: 10,
+                }}
+              >
                 <button
                   onClick={() => setOpenKey(isOpen ? null : key)}
                   className="hp-tap"
@@ -1189,17 +790,37 @@ function SyllabusPanel({ exam }) {
                   }}
                 >
                   <div>
-                    <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, textTransform: "uppercase", letterSpacing: 0.4 }}>
+                    <div
+                      style={{
+                        fontFamily: monoFont,
+                        fontSize: 10,
+                        color: C.inkSoft,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.4,
+                      }}
+                    >
                       {stage.stage}
                     </div>
-                    <div style={{ fontFamily: bodyFont, fontSize: 13.5, fontWeight: 600, color: C.ink, marginTop: 2 }}>
+                    <div
+                      style={{
+                        fontFamily: bodyFont,
+                        fontSize: 13.5,
+                        fontWeight: 600,
+                        color: C.ink,
+                        marginTop: 2,
+                      }}
+                    >
                       {paper.name}
                     </div>
                   </div>
                   <ChevronDown
                     size={16}
                     color={C.inkSoft}
-                    style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .15s", flexShrink: 0 }}
+                    style={{
+                      transform: isOpen ? "rotate(180deg)" : "none",
+                      transition: "transform .15s",
+                      flexShrink: 0,
+                    }}
                   />
                 </button>
                 {isOpen && (
@@ -1257,11 +878,39 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
         Back to exams
       </button>
 
-      <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, overflow: "hidden" }}>
-        <div style={{ padding: 20, background: C.primary || "#14213d", color: C.onPrimary || "#fff" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 15 }}>
+      <div
+        style={{
+          background: C.surface,
+          border: `1px solid ${C.line}`,
+          borderRadius: 14,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            padding: 20,
+            background: C.primary || "#14213d",
+            color: C.onPrimary || "#fff",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 15,
+            }}
+          >
             <div>
-              <div style={{ fontFamily: monoFont, fontSize: 10, textTransform: "uppercase", opacity: 0.65, marginBottom: 6 }}>
+              <div
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  opacity: 0.65,
+                  marginBottom: 6,
+                }}
+              >
                 {exam.category}
               </div>
               <h1 style={{ fontFamily: displayFont, fontSize: 30, lineHeight: 1.1, margin: 0 }}>
@@ -1290,51 +939,186 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
         </div>
 
         <div style={{ padding: 20 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 20 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 10,
+              marginBottom: 20,
+            }}
+          >
             <div style={{ background: C.softBlue, borderRadius: 10, padding: 12 }}>
-              <div style={{ fontFamily: monoFont, fontSize: 9, color: C.inkSoft, textTransform: "uppercase" }}>Exam date</div>
-              <div style={{ fontFamily: bodyFont, fontSize: 14, fontWeight: 600, color: C.ink, marginTop: 4 }}>
+              <div
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 9,
+                  color: C.inkSoft,
+                  textTransform: "uppercase",
+                }}
+              >
+                Exam date
+              </div>
+              <div
+                style={{
+                  fontFamily: bodyFont,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: C.ink,
+                  marginTop: 4,
+                }}
+              >
                 {formatDate(exam.examDate)}
               </div>
             </div>
-            <div style={{ background: dl <= 14 ? C.softRed : C.softGreen, borderRadius: 10, padding: 12 }}>
-              <div style={{ fontFamily: monoFont, fontSize: 9, color: C.inkSoft, textTransform: "uppercase" }}>Countdown</div>
-              <div style={{ fontFamily: monoFont, fontSize: 14, fontWeight: 700, color: dl <= 14 ? C.red : C.green, marginTop: 4 }}>
+            <div
+              style={{
+                background: dl <= 14 ? C.softRed : C.softGreen,
+                borderRadius: 10,
+                padding: 12,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 9,
+                  color: C.inkSoft,
+                  textTransform: "uppercase",
+                }}
+              >
+                Countdown
+              </div>
+              <div
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: dl <= 14 ? C.red : C.green,
+                  marginTop: 4,
+                }}
+              >
                 {getCountdownText(dl)}
               </div>
             </div>
           </div>
 
+          {/* Verified badge (new from Step 1) */}
+          {(exam.lastVerified || exam.source) && (
+            <div
+              style={{
+                background: C.softGreen,
+                borderRadius: 10,
+                padding: "10px 12px",
+                marginBottom: 18,
+                fontFamily: bodyFont,
+                fontSize: 12.5,
+                color: C.ink,
+                lineHeight: 1.45,
+              }}
+            >
+              <strong style={{ color: C.green }}>✓ Verified data</strong>
+              {exam.lastVerified && (
+                <span style={{ color: C.inkSoft }}>
+                  {" "}
+                  · Last checked {formatDate(exam.lastVerified)}
+                </span>
+              )}
+              {exam.source && (
+                <div style={{ marginTop: 4, color: C.inkSoft, fontSize: 12 }}>
+                  Source: {exam.source}
+                  {exam.sourceUrl && (
+                    <>
+                      {" "}
+                      ·{" "}
+                      <a
+                        href={exam.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: C.blue }}
+                      >
+                        Official link
+                      </a>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <section style={{ marginBottom: 22 }}>
-            <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 8px", color: C.ink }}>About the exam</h2>
-            <p style={{ fontFamily: bodyFont, fontSize: 13.5, lineHeight: 1.6, color: C.inkSoft, margin: 0 }}>
+            <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 8px", color: C.ink }}>
+              About the exam
+            </h2>
+            <p
+              style={{
+                fontFamily: bodyFont,
+                fontSize: 13.5,
+                lineHeight: 1.6,
+                color: C.inkSoft,
+                margin: 0,
+              }}
+            >
               {exam.description}
             </p>
           </section>
 
           <section style={{ marginBottom: 22 }}>
-            <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 10px", color: C.ink }}>Eligibility</h2>
+            <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 10px", color: C.ink }}>
+              Eligibility
+            </h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div className="hp-eligibility-row">
-                <strong className="hp-eligibility-label" style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.ink }}>Education</strong>
-                <span style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft }}>{exam.eligibility.education}</span>
+                <strong
+                  className="hp-eligibility-label"
+                  style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.ink }}
+                >
+                  Education
+                </strong>
+                <span style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft }}>
+                  {exam.eligibility?.education}
+                </span>
               </div>
               <div className="hp-eligibility-row">
-                <strong className="hp-eligibility-label" style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.ink }}>Age</strong>
-                <span style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft }}>{exam.eligibility.age}</span>
+                <strong
+                  className="hp-eligibility-label"
+                  style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.ink }}
+                >
+                  Age
+                </strong>
+                <span style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft }}>
+                  {exam.eligibility?.age}
+                </span>
               </div>
               <div className="hp-eligibility-row">
-                <strong className="hp-eligibility-label" style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.ink }}>Attempts</strong>
-                <span style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft }}>{exam.eligibility.attempts}</span>
+                <strong
+                  className="hp-eligibility-label"
+                  style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.ink }}
+                >
+                  Attempts
+                </strong>
+                <span style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft }}>
+                  {exam.eligibility?.attempts}
+                </span>
               </div>
             </div>
           </section>
 
           <section style={{ marginBottom: 22 }}>
-            <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 10px", color: C.ink }}>Selection process</h2>
+            <h2 style={{ fontFamily: displayFont, fontSize: 18, margin: "0 0 10px", color: C.ink }}>
+              Selection process
+            </h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {exam.stages.map((stage, index) => (
-                <div key={stage} style={{ display: "flex", alignItems: "center", gap: 9, fontFamily: bodyFont, fontSize: 13, color: C.inkSoft }}>
+              {(exam.stages || []).map((stage, index) => (
+                <div
+                  key={stage}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    fontFamily: bodyFont,
+                    fontSize: 13,
+                    color: C.inkSoft,
+                  }}
+                >
                   <span
                     style={{
                       width: 23,
@@ -1406,8 +1190,17 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
                 <FileText size={14} />
               </a>
             </div>
-            <p style={{ marginTop: 10, fontFamily: bodyFont, fontSize: 11.5, color: C.inkSoft, lineHeight: 1.45 }}>
-              Official previous papers open on the exam authority’s site. Hall Pass mocks use original practice items — not copied past papers.
+            <p
+              style={{
+                marginTop: 10,
+                fontFamily: bodyFont,
+                fontSize: 11.5,
+                color: C.inkSoft,
+                lineHeight: 1.45,
+              }}
+            >
+              Official previous papers open on the exam authority’s site. Hall Pass mocks use original
+              practice items — not copied past papers.
             </p>
           </section>
         </div>
@@ -1428,6 +1221,11 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // Exams from Firestore (Step 1)
+  const [exams, setExams] = useState([]);
+  const [examsLoading, setExamsLoading] = useState(true);
+  const [examsError, setExamsError] = useState(null);
+
   const [view, setView] = useState("home");
   const [selectedId, setSelectedId] = useState(null);
 
@@ -1443,8 +1241,7 @@ export default function App() {
   });
   const T = THEMES[theme] || THEMES.light;
 
-  // Apply theme colors synchronously on every render so navigating
-  // home ↔ detail never flashes the wrong palette.
+  // Apply theme colors synchronously
   Object.assign(C, {
     bg: T.bg,
     surface: T.surface,
@@ -1511,6 +1308,34 @@ export default function App() {
   }, []);
 
   /* =======================================================
+     LOAD EXAMS FROM FIRESTORE (Step 1)
+  ======================================================= */
+  useEffect(() => {
+    setExamsLoading(true);
+    setExamsError(null);
+
+    const unsub = subscribeExams(
+      (list) => {
+        if (!list || list.length === 0) {
+          console.warn("No exams in Firestore yet — using seed data as fallback");
+          setExams(SEED_EXAMS);
+        } else {
+          setExams(list);
+        }
+        setExamsLoading(false);
+      },
+      (err) => {
+        console.error("Exams listener error:", err);
+        setExamsError("Could not load exams. Using offline seed data.");
+        setExams(SEED_EXAMS);
+        setExamsLoading(false);
+      }
+    );
+
+    return () => unsub();
+  }, []);
+
+  /* =======================================================
      LIVE NOTES (onSnapshot)
   ======================================================= */
   useEffect(() => {
@@ -1563,7 +1388,7 @@ export default function App() {
   }, [user]);
 
   /* =======================================================
-     LOAD STARRED EXAMS
+     LOAD STARRED EXAMS (still localStorage for now — Step 2 will move this)
   ======================================================= */
   useEffect(() => {
     if (!user) {
@@ -1598,7 +1423,10 @@ export default function App() {
     }
 
     try {
-      const tags = noteTags.split(",").map((t) => t.trim()).filter(Boolean);
+      const tags = noteTags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
 
       if (editingNote) {
         await updateDoc(doc(db, "notes", editingNote), {
@@ -1648,7 +1476,7 @@ export default function App() {
   };
 
   /* =======================================================
-     STAR / TRACK EXAM
+     STAR / TRACK EXAM (still localStorage — Step 2 will cloud-sync)
   ======================================================= */
   const toggleStar = useCallback(
     (id) => {
@@ -1668,9 +1496,9 @@ export default function App() {
     [user]
   );
 
-  const categories = ["All", ...Array.from(new Set(EXAMS.map((e) => e.category)))];
+  const categories = ["All", ...Array.from(new Set(exams.map((e) => e.category)))];
 
-  const filtered = EXAMS.filter((exam) => {
+  const filtered = exams.filter((exam) => {
     const searchText = query.trim().toLowerCase();
     const matchesSearch =
       searchText === "" ||
@@ -1681,11 +1509,11 @@ export default function App() {
     return matchesSearch && matchesCategory;
   });
 
-  const starredExams = EXAMS
+  const starredExams = exams
     .filter((exam) => starred.has(exam.id))
     .sort((a, b) => daysLeft(a.examDate) - daysLeft(b.examDate));
 
-  const selectedExam = EXAMS.find((exam) => exam.id === selectedId);
+  const selectedExam = exams.find((exam) => exam.id === selectedId);
 
   const filteredNotes = notes.filter((note) => {
     const search = noteSearch.trim().toLowerCase();
@@ -1706,11 +1534,21 @@ export default function App() {
   };
 
   /* =======================================================
-     AUTH LOADING SCREEN
+     AUTH + EXAMS LOADING SCREEN
   ======================================================= */
-  if (authLoading) {
+  if (authLoading || examsLoading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg, fontFamily: bodyFont, color: C.ink }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: C.bg,
+          fontFamily: bodyFont,
+          color: C.ink,
+        }}
+      >
         <div style={{ textAlign: "center" }}>
           <Ticket size={42} color={C.ink} style={{ margin: "0 auto 12px" }} />
           <div style={{ fontFamily: displayFont, fontSize: 24, fontWeight: 700 }}>Hall Pass</div>
@@ -1759,7 +1597,7 @@ export default function App() {
       `}</style>
 
       <div style={{ maxWidth: 760, margin: "0 auto" }}>
-        <HeroPass trackedCount={starred.size} />
+        <HeroPass trackedCount={starred.size} exams={exams} />
 
         {/* User bar */}
         <div
@@ -1776,7 +1614,18 @@ export default function App() {
             flexWrap: "wrap",
           }}
         >
-          <div style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.inkSoft, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 120 }}>
+          <div
+            style={{
+              fontFamily: bodyFont,
+              fontSize: 12.5,
+              color: C.inkSoft,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              flex: 1,
+              minWidth: 120,
+            }}
+          >
             Signed in as <strong style={{ color: C.ink }}>{user.email}</strong>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
@@ -1804,7 +1653,11 @@ export default function App() {
             </button>
             <button
               onClick={async () => {
-                try { await signOut(auth); } catch (e) { console.error(e); }
+                try {
+                  await signOut(auth);
+                } catch (e) {
+                  console.error(e);
+                }
               }}
               style={{
                 fontFamily: bodyFont,
@@ -1822,6 +1675,22 @@ export default function App() {
             </button>
           </div>
         </div>
+
+        {examsError && (
+          <div
+            style={{
+              background: C.softYellow,
+              color: C.ink,
+              borderRadius: 10,
+              padding: "10px 12px",
+              marginBottom: 16,
+              fontFamily: bodyFont,
+              fontSize: 13,
+            }}
+          >
+            {examsError}
+          </div>
+        )}
 
         {view !== "detail" && <ProgressDashboard userId={user.uid} colors={C} />}
 
@@ -1841,7 +1710,15 @@ export default function App() {
             {/* Starred */}
             {starLoaded && starredExams.length > 0 && (
               <div style={{ marginBottom: 24 }}>
-                <div style={{ fontFamily: monoFont, fontSize: 11, color: C.inkSoft, textTransform: "uppercase", marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontFamily: monoFont,
+                    fontSize: 11,
+                    color: C.inkSoft,
+                    textTransform: "uppercase",
+                    marginBottom: 8,
+                  }}
+                >
                   ★ Your starred exams
                 </div>
                 <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
@@ -1870,7 +1747,13 @@ export default function App() {
                         }}
                       >
                         {exam.shortName}
-                        <span style={{ fontFamily: monoFont, color: dl <= 14 ? C.red : C.green, fontWeight: 600 }}>
+                        <span
+                          style={{
+                            fontFamily: monoFont,
+                            color: dl <= 14 ? C.red : C.green,
+                            fontWeight: 600,
+                          }}
+                        >
                           {dl}d
                         </span>
                       </button>
@@ -1899,17 +1782,42 @@ export default function App() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search exams — UPSC, SSC, JEE…"
                 aria-label="Search exams"
-                style={{ border: "none", outline: "none", background: "transparent", fontFamily: bodyFont, fontSize: 13.5, color: C.ink, width: "100%" }}
+                style={{
+                  border: "none",
+                  outline: "none",
+                  background: "transparent",
+                  fontFamily: bodyFont,
+                  fontSize: 13.5,
+                  color: C.ink,
+                  width: "100%",
+                }}
               />
               {query && (
-                <button onClick={() => setQuery("")} style={{ border: "none", background: "transparent", color: C.inkSoft, cursor: "pointer", fontSize: 12 }}>
+                <button
+                  onClick={() => setQuery("")}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: C.inkSoft,
+                    cursor: "pointer",
+                    fontSize: 12,
+                  }}
+                >
                   Clear
                 </button>
               )}
             </div>
 
             {/* Categories */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 20, overflowX: "auto", paddingBottom: 4 }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                marginBottom: 20,
+                overflowX: "auto",
+                paddingBottom: 4,
+              }}
+            >
               {categories.map((item) => (
                 <button
                   key={item}
@@ -1933,12 +1841,30 @@ export default function App() {
             </div>
 
             {/* Notes Dashboard */}
-            <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <div
+              style={{
+                background: C.surface,
+                border: `1px solid ${C.line}`,
+                borderRadius: 14,
+                padding: 16,
+                marginBottom: 20,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: 14,
+                }}
+              >
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <BookOpen size={20} color={C.ink} />
-                    <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 20, color: C.ink }}>My Notes</h2>
+                    <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 20, color: C.ink }}>
+                      My Notes
+                    </h2>
                   </div>
                   <div style={{ marginTop: 4, fontFamily: bodyFont, fontSize: 12, color: C.inkSoft }}>
                     Save and sync your exam notes with your account.
@@ -1977,43 +1903,115 @@ export default function App() {
               {showNotes && (
                 <>
                   {notesError && (
-                    <div style={{ background: C.softRed, color: C.red, border: `1px solid ${C.red}55`, borderRadius: 9, padding: "9px 11px", marginBottom: 14, fontFamily: bodyFont, fontSize: 12.5, lineHeight: 1.5 }}>
+                    <div
+                      style={{
+                        background: C.softRed,
+                        color: C.red,
+                        border: `1px solid ${C.red}55`,
+                        borderRadius: 9,
+                        padding: "9px 11px",
+                        marginBottom: 14,
+                        fontFamily: bodyFont,
+                        fontSize: 12.5,
+                        lineHeight: 1.5,
+                      }}
+                    >
                       {notesError}
                     </div>
                   )}
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.bg, border: `1px solid ${C.line}`, borderRadius: 9, padding: "8px 10px", marginBottom: 14 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      background: C.bg,
+                      border: `1px solid ${C.line}`,
+                      borderRadius: 9,
+                      padding: "8px 10px",
+                      marginBottom: 14,
+                    }}
+                  >
                     <Search size={15} color={C.inkSoft} />
                     <input
                       value={noteSearch}
                       onChange={(e) => setNoteSearch(e.target.value)}
                       placeholder="Search your notes..."
-                      style={{ border: "none", outline: "none", background: "transparent", width: "100%", fontFamily: bodyFont, fontSize: 13, color: C.ink }}
+                      style={{
+                        border: "none",
+                        outline: "none",
+                        background: "transparent",
+                        width: "100%",
+                        fontFamily: bodyFont,
+                        fontSize: 13,
+                        color: C.ink,
+                      }}
                     />
                   </div>
 
-                  <div style={{ background: C.softBlue, borderRadius: 10, padding: 14, marginBottom: 16 }}>
-                    <div style={{ fontFamily: displayFont, fontSize: 15, fontWeight: 700, color: C.ink, marginBottom: 10 }}>
+                  <div
+                    style={{
+                      background: C.softBlue,
+                      borderRadius: 10,
+                      padding: 14,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: displayFont,
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: C.ink,
+                        marginBottom: 10,
+                      }}
+                    >
                       {editingNote ? "Edit Note" : "Create a Note"}
                     </div>
                     <input
                       value={noteTitle}
                       onChange={(e) => setNoteTitle(e.target.value)}
                       placeholder="Note title"
-                      style={{ width: "100%", padding: "9px 10px", border: `1px solid ${C.line}`, borderRadius: 8, marginBottom: 8, background: "#fff", color: C.ink }}
+                      style={{
+                        width: "100%",
+                        padding: "9px 10px",
+                        border: `1px solid ${C.line}`,
+                        borderRadius: 8,
+                        marginBottom: 8,
+                        background: "#fff",
+                        color: C.ink,
+                      }}
                     />
                     <textarea
                       value={noteContent}
                       onChange={(e) => setNoteContent(e.target.value)}
                       placeholder="Write your notes here..."
                       rows={5}
-                      style={{ width: "100%", padding: "9px 10px", border: `1px solid ${C.line}`, borderRadius: 8, resize: "vertical", background: "#fff", color: C.ink, fontFamily: bodyFont, marginBottom: 8 }}
+                      style={{
+                        width: "100%",
+                        padding: "9px 10px",
+                        border: `1px solid ${C.line}`,
+                        borderRadius: 8,
+                        resize: "vertical",
+                        background: "#fff",
+                        color: C.ink,
+                        fontFamily: bodyFont,
+                        marginBottom: 8,
+                      }}
                     />
                     <input
                       value={noteTags}
                       onChange={(e) => setNoteTags(e.target.value)}
                       placeholder="Tags: GATE, DSA, Maths"
-                      style={{ width: "100%", padding: "9px 10px", border: `1px solid ${C.line}`, borderRadius: 8, marginBottom: 10, background: "#fff", color: C.ink }}
+                      style={{
+                        width: "100%",
+                        padding: "9px 10px",
+                        border: `1px solid ${C.line}`,
+                        borderRadius: 8,
+                        marginBottom: 10,
+                        background: "#fff",
+                        color: C.ink,
+                      }}
                     />
                     <div style={{ display: "flex", gap: 8 }}>
                       <button
@@ -2044,7 +2042,16 @@ export default function App() {
                             setNoteContent("");
                             setNoteTags("");
                           }}
-                          style={{ border: `1px solid ${C.line}`, borderRadius: 8, background: "#fff", color: C.ink, padding: "8px 13px", cursor: "pointer", fontFamily: bodyFont, fontSize: 12 }}
+                          style={{
+                            border: `1px solid ${C.line}`,
+                            borderRadius: 8,
+                            background: "#fff",
+                            color: C.ink,
+                            padding: "8px 13px",
+                            cursor: "pointer",
+                            fontFamily: bodyFont,
+                            fontSize: 12,
+                          }}
                         >
                           Cancel
                         </button>
@@ -2052,43 +2059,116 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, textTransform: "uppercase", marginBottom: 8 }}>
+                  <div
+                    style={{
+                      fontFamily: monoFont,
+                      fontSize: 10,
+                      color: C.inkSoft,
+                      textTransform: "uppercase",
+                      marginBottom: 8,
+                    }}
+                  >
                     {filteredNotes.length} {filteredNotes.length === 1 ? "NOTE" : "NOTES"}
                   </div>
 
                   {notesLoading ? (
-                    <div style={{ textAlign: "center", padding: 25, color: C.inkSoft, fontFamily: bodyFont, fontSize: 13 }}>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: 25,
+                        color: C.inkSoft,
+                        fontFamily: bodyFont,
+                        fontSize: 13,
+                      }}
+                    >
                       Loading your notes...
                     </div>
                   ) : filteredNotes.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: 25, border: `1px dashed ${C.line}`, borderRadius: 10, color: C.inkSoft, fontFamily: bodyFont, fontSize: 13 }}>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: 25,
+                        border: `1px dashed ${C.line}`,
+                        borderRadius: 10,
+                        color: C.inkSoft,
+                        fontFamily: bodyFont,
+                        fontSize: 13,
+                      }}
+                    >
                       <BookOpen size={28} style={{ marginBottom: 8, opacity: 0.5 }} />
-                      <div style={{ fontWeight: 600, color: C.ink, marginBottom: 4 }}>No notes yet</div>
+                      <div style={{ fontWeight: 600, color: C.ink, marginBottom: 4 }}>
+                        No notes yet
+                      </div>
                       <div>Create your first exam note above.</div>
                     </div>
                   ) : (
                     <div style={{ display: "grid", gap: 10 }}>
                       {filteredNotes.map((note) => (
-                        <div key={note.id} style={{ border: `1px solid ${C.line}`, borderRadius: 10, padding: 13, background: "#fff" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                        <div
+                          key={note.id}
+                          style={{
+                            border: `1px solid ${C.line}`,
+                            borderRadius: 10,
+                            padding: 13,
+                            background: "#fff",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-start",
+                              gap: 10,
+                            }}
+                          >
                             <div>
-                              <div style={{ fontFamily: displayFont, fontSize: 16, fontWeight: 700, color: C.ink }}>
+                              <div
+                                style={{
+                                  fontFamily: displayFont,
+                                  fontSize: 16,
+                                  fontWeight: 700,
+                                  color: C.ink,
+                                }}
+                              >
                                 {note.title || "Untitled Note"}
                               </div>
-                              <div style={{ marginTop: 6, fontFamily: bodyFont, fontSize: 13, lineHeight: 1.5, color: C.inkSoft, whiteSpace: "pre-wrap" }}>
+                              <div
+                                style={{
+                                  marginTop: 6,
+                                  fontFamily: bodyFont,
+                                  fontSize: 13,
+                                  lineHeight: 1.5,
+                                  color: C.inkSoft,
+                                  whiteSpace: "pre-wrap",
+                                }}
+                              >
                                 {note.content}
                               </div>
                             </div>
                             <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
                               <button
                                 onClick={() => startEditingNote(note)}
-                                style={{ border: `1px solid ${C.line}`, background: C.bg, borderRadius: 7, padding: "6px 8px", cursor: "pointer", color: C.ink }}
+                                style={{
+                                  border: `1px solid ${C.line}`,
+                                  background: C.bg,
+                                  borderRadius: 7,
+                                  padding: "6px 8px",
+                                  cursor: "pointer",
+                                  color: C.ink,
+                                }}
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => deleteNote(note.id)}
-                                style={{ border: "none", background: C.softRed, borderRadius: 7, padding: "6px 8px", cursor: "pointer", color: C.red }}
+                                style={{
+                                  border: "none",
+                                  background: C.softRed,
+                                  borderRadius: 7,
+                                  padding: "6px 8px",
+                                  cursor: "pointer",
+                                  color: C.red,
+                                }}
                               >
                                 Delete
                               </button>
@@ -2097,7 +2177,17 @@ export default function App() {
                           {Array.isArray(note.tags) && note.tags.length > 0 && (
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
                               {note.tags.map((tag) => (
-                                <span key={tag} style={{ background: C.softYellow, color: C.ink, borderRadius: 20, padding: "4px 8px", fontFamily: monoFont, fontSize: 9 }}>
+                                <span
+                                  key={tag}
+                                  style={{
+                                    background: C.softYellow,
+                                    color: C.ink,
+                                    borderRadius: 20,
+                                    padding: "4px 8px",
+                                    fontFamily: monoFont,
+                                    fontSize: 9,
+                                  }}
+                                >
                                   #{tag}
                                 </span>
                               ))}
@@ -2115,19 +2205,46 @@ export default function App() {
             <CloudFiles user={user} />
 
             {/* Results count */}
-            <div style={{ fontFamily: monoFont, fontSize: 10.5, color: C.inkSoft, marginBottom: 10, textTransform: "uppercase" }}>
+            <div
+              style={{
+                fontFamily: monoFont,
+                fontSize: 10.5,
+                color: C.inkSoft,
+                marginBottom: 10,
+                textTransform: "uppercase",
+              }}
+            >
               {filtered.length} {filtered.length === 1 ? "exam" : "exams"} found
             </div>
 
             {/* Exam cards */}
             {filtered.length === 0 ? (
-              <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 12, fontFamily: bodyFont, fontSize: 13.5, color: C.inkSoft, textAlign: "center", padding: "40px 20px" }}>
+              <div
+                style={{
+                  background: C.surface,
+                  border: `1px solid ${C.line}`,
+                  borderRadius: 12,
+                  fontFamily: bodyFont,
+                  fontSize: 13.5,
+                  color: C.inkSoft,
+                  textAlign: "center",
+                  padding: "40px 20px",
+                }}
+              >
                 <Search size={30} style={{ marginBottom: 10, opacity: 0.45 }} />
                 <div style={{ fontWeight: 600, color: C.ink, marginBottom: 5 }}>No exams found</div>
-                <div>No exams match "{query}". Try a different search or category.</div>
+                <div>
+                  No exams match "{query}". Try a different search or category.
+                </div>
               </div>
             ) : (
-              <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(min(260px, 100%), 1fr))" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gap: 16,
+                  gridTemplateColumns: "repeat(auto-fill, minmax(min(260px, 100%), 1fr))",
+                }}
+              >
                 {filtered.map((exam) => (
                   <ExamCard
                     key={exam.id}
@@ -2143,10 +2260,19 @@ export default function App() {
               </div>
             )}
 
-            <div style={{ fontFamily: bodyFont, fontSize: 11.5, color: C.inkSoft, textAlign: "center", marginTop: 28, lineHeight: 1.5 }}>
-              Sample exams shown for demo purposes.
+            <div
+              style={{
+                fontFamily: bodyFont,
+                fontSize: 11.5,
+                color: C.inkSoft,
+                textAlign: "center",
+                marginTop: 28,
+                lineHeight: 1.5,
+              }}
+            >
+              Exam data is loaded from Firestore.
               <br />
-              Connect a live exam feed to replace them with real, verified dates.
+              You can update dates, eligibility, and syllabus without redeploying the app.
             </div>
           </>
         )}
