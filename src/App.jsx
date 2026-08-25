@@ -3,16 +3,12 @@ import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
 import Auth from "./Auth";
-import PracticeTestSection, { loadProgress } from "./PracticeTest";
+import PracticeTestSection from "./PracticeTest"; // still imports the component
 import CloudFiles from "./CloudFiles";
 
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "./firebase";
 
-// Imported as a namespace (not destructured) to avoid a known Vite/Rollup
-// production-build issue where some Firebase modular SDK named exports
-// (e.g. onSnapshot) get dropped during tree-shaking despite working fine
-// in dev mode. Using the namespace object sidesteps that entirely.
 import * as firestore from "firebase/firestore";
 const {
   collection,
@@ -45,6 +41,8 @@ import {
 
 import { subscribeExams } from "./services/examService";
 import { SEED_EXAMS } from "./data/seedExamsData";
+import { subscribeStarred, toggleStarred } from "./services/starredService";
+import { subscribeAttempts } from "./services/progressService";
 
 /* =========================================================
    FONTS & COLORS
@@ -114,23 +112,12 @@ const THEMES = {
 };
 
 /* =========================================================
-   PROGRESS DASHBOARD
+   PROGRESS DASHBOARD (now cloud-synced)
 ========================================================= */
-function ProgressDashboard({ userId, colors }) {
-  const [attempts, setAttempts] = useState([]);
+function ProgressDashboard({ attempts, colors }) {
   const T = colors || C;
 
-  useEffect(() => {
-    setAttempts(loadProgress(userId));
-  }, [userId]);
-
-  useEffect(() => {
-    const onFocus = () => setAttempts(loadProgress(userId));
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [userId]);
-
-  if (!attempts.length) {
+  if (!attempts || attempts.length === 0) {
     return (
       <div
         style={{
@@ -149,6 +136,7 @@ function ProgressDashboard({ userId, colors }) {
         </div>
         <p style={{ margin: 0, fontFamily: bodyFont, fontSize: 13, color: T.inkSoft, lineHeight: 1.5 }}>
           Complete a full or sectional mock to see scores, accuracy, and weak sections here.
+          Progress now syncs across all your devices.
         </p>
       </div>
     );
@@ -157,6 +145,7 @@ function ProgressDashboard({ userId, colors }) {
   const avgPct =
     attempts.reduce((a, x) => a + (x.maxScore ? (x.score / x.maxScore) * 100 : 0), 0) /
     attempts.length;
+
   const weakMap = {};
   attempts.forEach((a) => {
     (a.weakSections || []).forEach((w) => {
@@ -1001,7 +990,6 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
             </div>
           </div>
 
-          {/* Verified badge (new from Step 1) */}
           {(exam.lastVerified || exam.source) && (
             <div
               style={{
@@ -1221,10 +1209,17 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Exams from Firestore (Step 1)
+  // Exams from Firestore
   const [exams, setExams] = useState([]);
   const [examsLoading, setExamsLoading] = useState(true);
   const [examsError, setExamsError] = useState(null);
+
+  // Starred (cloud)
+  const [starred, setStarred] = useState(new Set());
+  const [starLoaded, setStarLoaded] = useState(false);
+
+  // Attempts / progress (cloud)
+  const [attempts, setAttempts] = useState([]);
 
   const [view, setView] = useState("home");
   const [selectedId, setSelectedId] = useState(null);
@@ -1241,7 +1236,7 @@ export default function App() {
   });
   const T = THEMES[theme] || THEMES.light;
 
-  // Apply theme colors synchronously
+  // Apply theme colors
   Object.assign(C, {
     bg: T.bg,
     surface: T.surface,
@@ -1269,9 +1264,6 @@ export default function App() {
     document.body.style.color = T.ink;
   }, [theme, T]);
 
-  const [starred, setStarred] = useState(new Set());
-  const [starLoaded, setStarLoaded] = useState(false);
-
   // Notes
   const [notes, setNotes] = useState([]);
   const [notesLoading, setNotesLoading] = useState(false);
@@ -1285,7 +1277,7 @@ export default function App() {
   const [noteTags, setNoteTags] = useState("");
 
   /* =======================================================
-     FIREBASE AUTH STATE
+     AUTH
   ======================================================= */
   useEffect(() => {
     if (!auth) {
@@ -1308,7 +1300,7 @@ export default function App() {
   }, []);
 
   /* =======================================================
-     LOAD EXAMS FROM FIRESTORE (Step 1)
+     EXAMS
   ======================================================= */
   useEffect(() => {
     setExamsLoading(true);
@@ -1336,7 +1328,49 @@ export default function App() {
   }, []);
 
   /* =======================================================
-     LIVE NOTES (onSnapshot)
+     STARRED (cloud – Step 2)
+  ======================================================= */
+  useEffect(() => {
+    if (!user) {
+      setStarred(new Set());
+      setStarLoaded(false);
+      return;
+    }
+
+    setStarLoaded(false);
+    const unsub = subscribeStarred(
+      user.uid,
+      (ids) => {
+        setStarred(ids);
+        setStarLoaded(true);
+      },
+      (err) => {
+        console.error("Starred load error:", err);
+        setStarLoaded(true);
+      }
+    );
+    return () => unsub();
+  }, [user]);
+
+  /* =======================================================
+     ATTEMPTS / PROGRESS (cloud – Step 3)
+  ======================================================= */
+  useEffect(() => {
+    if (!user) {
+      setAttempts([]);
+      return;
+    }
+
+    const unsub = subscribeAttempts(
+      user.uid,
+      (list) => setAttempts(list),
+      (err) => console.error("Attempts load error:", err)
+    );
+    return () => unsub();
+  }, [user]);
+
+  /* =======================================================
+     NOTES
   ======================================================= */
   useEffect(() => {
     if (!user) {
@@ -1385,31 +1419,6 @@ export default function App() {
     }
 
     return () => unsubscribe();
-  }, [user]);
-
-  /* =======================================================
-     LOAD STARRED EXAMS (still localStorage for now — Step 2 will move this)
-  ======================================================= */
-  useEffect(() => {
-    if (!user) {
-      setStarred(new Set());
-      setStarLoaded(false);
-      return;
-    }
-    try {
-      const saved = localStorage.getItem(`hallpass-starred:${user.uid}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setStarred(Array.isArray(parsed) ? new Set(parsed) : new Set());
-      } else {
-        setStarred(new Set());
-      }
-    } catch (error) {
-      console.error("Could not load starred exams:", error);
-      setStarred(new Set());
-    } finally {
-      setStarLoaded(true);
-    }
   }, [user]);
 
   const saveNote = async () => {
@@ -1476,22 +1485,18 @@ export default function App() {
   };
 
   /* =======================================================
-     STAR / TRACK EXAM (still localStorage — Step 2 will cloud-sync)
+     TOGGLE STAR (cloud)
   ======================================================= */
   const toggleStar = useCallback(
-    (id) => {
+    async (id) => {
       if (!user) return;
-      setStarred((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        try {
-          localStorage.setItem(`hallpass-starred:${user.uid}`, JSON.stringify([...next]));
-        } catch (error) {
-          console.error("Could not save starred exams:", error);
-        }
-        return next;
-      });
+      try {
+        await toggleStarred(user.uid, id);
+        // onSnapshot will update the Set automatically
+      } catch (err) {
+        console.error("Toggle star failed:", err);
+        alert("Could not update starred status. Check connection / rules.");
+      }
     },
     [user]
   );
@@ -1534,7 +1539,7 @@ export default function App() {
   };
 
   /* =======================================================
-     AUTH + EXAMS LOADING SCREEN
+     LOADING
   ======================================================= */
   if (authLoading || examsLoading) {
     return (
@@ -1561,7 +1566,7 @@ export default function App() {
   if (!user) return <Auth />;
 
   /* =======================================================
-     HALL PASS APP
+     APP
   ======================================================= */
   return (
     <div
@@ -1692,7 +1697,7 @@ export default function App() {
           </div>
         )}
 
-        {view !== "detail" && <ProgressDashboard userId={user.uid} colors={C} />}
+        {view !== "detail" && <ProgressDashboard attempts={attempts} colors={C} />}
 
         {view === "detail" && selectedExam ? (
           <ExamDetail
@@ -2270,9 +2275,9 @@ export default function App() {
                 lineHeight: 1.5,
               }}
             >
-              Exam data is loaded from Firestore.
+              Exam data, starred list and progress are loaded from Firestore.
               <br />
-              You can update dates, eligibility, and syllabus without redeploying the app.
+              Everything syncs across your devices.
             </div>
           </>
         )}
