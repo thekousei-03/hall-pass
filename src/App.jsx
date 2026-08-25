@@ -344,21 +344,89 @@ const EXAMS = [
     stages: ["Computer Based Test", "Score", "Admission / Recruitment"],
     syllabus: [
       {
-        stage: "GATE (paper-specific)",
+        stage: "Common to all papers",
         papers: [
           {
-            name: "General Aptitude (common to all papers)",
+            name: "General Aptitude (GA) — 15 marks",
             topics: [
               "Verbal Ability — English grammar, sentence completion, verbal analogies, word groups, instructions, critical reasoning, verbal deduction",
               "Numerical Ability — Numerical computation, numerical estimation, numerical reasoning, data interpretation",
             ],
           },
           {
-            name: "Subject paper (chosen discipline)",
+            name: "Engineering Mathematics (most engineering papers)",
             topics: [
-              "Core engineering/science topics as per the chosen GATE paper code (CS, ME, EE, EC, CE, etc.)",
-              "Engineering Mathematics (for most papers)",
-              "See official GATE brochure for the full syllabus of your paper",
+              "Linear Algebra — matrices, determinants, systems of linear equations, eigenvalues/eigenvectors",
+              "Calculus — limits, continuity, differentiation, integration, maxima/minima, multiple integrals, vector calculus",
+              "Differential Equations — first order, higher order linear ODEs, partial differential equations (intro)",
+              "Complex Variables — analytic functions, Cauchy’s theorem/integral, Taylor & Laurent series, residues",
+              "Probability & Statistics — mean, median, mode, standard deviation, random variables, distributions, hypothesis testing",
+              "Numerical Methods — interpolation, numerical integration, solutions of linear/non-linear equations",
+            ],
+          },
+        ],
+      },
+      {
+        stage: "Major paper codes (core outline)",
+        papers: [
+          {
+            name: "CS — Computer Science & Information Technology",
+            topics: [
+              "Digital Logic, Computer Organization & Architecture",
+              "Programming & Data Structures, Algorithms",
+              "Theory of Computation, Compiler Design",
+              "Operating Systems, Databases",
+              "Computer Networks",
+              "Software Engineering, Discrete Mathematics",
+            ],
+          },
+          {
+            name: "ME — Mechanical Engineering",
+            topics: [
+              "Engineering Mechanics, Strength of Materials, Theory of Machines",
+              "Vibrations, Machine Design",
+              "Fluid Mechanics, Heat Transfer, Thermodynamics",
+              "Applications (Power Engineering, IC Engines, Refrigeration & AC, Turbomachinery)",
+              "Manufacturing Engineering, Industrial Engineering",
+            ],
+          },
+          {
+            name: "EE — Electrical Engineering",
+            topics: [
+              "Electric Circuits, Electromagnetic Fields",
+              "Signals & Systems, Electrical Machines",
+              "Power Systems, Control Systems",
+              "Electrical & Electronic Measurements",
+              "Analog & Digital Electronics, Power Electronics",
+            ],
+          },
+          {
+            name: "EC — Electronics & Communication",
+            topics: [
+              "Networks, Signals & Systems, Electronic Devices",
+              "Analog Circuits, Digital Circuits",
+              "Control Systems, Communications",
+              "Electromagnetics",
+              "Engineering Mathematics as applicable",
+            ],
+          },
+          {
+            name: "CE — Civil Engineering",
+            topics: [
+              "Engineering Mathematics, Structural Engineering",
+              "Geotechnical Engineering, Water Resources",
+              "Environmental Engineering",
+              "Transportation Engineering",
+              "Geomatics Engineering",
+            ],
+          },
+          {
+            name: "Other papers (examples)",
+            topics: [
+              "CH Chemical · BT Biotechnology · IN Instrumentation · AE Aerospace",
+              "PI Production & Industrial · MT Metallurgical · PE Petroleum · TF Textile",
+              "PH Physics · CY Chemistry · MA Mathematics · ST Statistics · XE / XL multi-section",
+              "Full syllabus for every paper code is in the official GATE brochure — always verify there",
             ],
           },
         ],
@@ -519,6 +587,27 @@ function HeroPass({ trackedCount }) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
+  // Exam dates for calendar markers
+  const examByDate = (() => {
+    const map = {};
+    EXAMS.forEach((e) => {
+      if (!e.examDate) return;
+      const key = e.examDate; // YYYY-MM-DD
+      if (!map[key]) map[key] = [];
+      map[key].push(e.shortName);
+    });
+    return map;
+  })();
+
+  const dateKey = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const examsOnSelected = examByDate[dateKey(selectedDate)] || [];
+
   return (
     <div
       style={{
@@ -589,18 +678,147 @@ function HeroPass({ trackedCount }) {
         }}
       >
         <CalendarDays size={18} />
-        {showCalendar ? "Hide Calendar" : "Open Calendar"}
+        {showCalendar ? "Hide Calendar" : "Open full month calendar"}
       </button>
 
       {showCalendar && (
-        <div style={{ marginTop: 15, background: "#fff", borderRadius: 12, padding: 12, color: "#111" }}>
-          <Calendar value={selectedDate} onChange={setSelectedDate} />
-          <div style={{ marginTop: 12, textAlign: "center", fontFamily: bodyFont, fontWeight: 600, color: C.ink }}>
-            Selected Date
+        <div
+          style={{
+            marginTop: 15,
+            background: "#fff",
+            borderRadius: 12,
+            padding: 14,
+            color: "#111",
+            position: "relative",
+            zIndex: 2,
+          }}
+        >
+          <style>{`
+            .hp-cal {
+              width: 100% !important;
+              max-width: 100%;
+              border: none !important;
+              font-family: ${bodyFont};
+              background: transparent !important;
+            }
+            .hp-cal .react-calendar__navigation {
+              display: flex;
+              margin-bottom: 10px;
+              height: 44px;
+            }
+            .hp-cal .react-calendar__navigation button {
+              min-width: 44px;
+              background: ${C.bg};
+              border: 1px solid ${C.line};
+              border-radius: 8px;
+              color: ${C.ink};
+              font-weight: 600;
+              font-size: 14px;
+            }
+            .hp-cal .react-calendar__navigation button:enabled:hover {
+              background: ${C.softBlue};
+            }
+            .hp-cal .react-calendar__navigation__label {
+              font-family: ${displayFont};
+              font-weight: 700;
+              font-size: 16px !important;
+              color: ${C.ink};
+              flex-grow: 1;
+            }
+            .hp-cal .react-calendar__month-view__weekdays {
+              text-align: center;
+              text-transform: uppercase;
+              font-size: 11px;
+              font-weight: 600;
+              color: ${C.inkSoft};
+              margin-bottom: 4px;
+            }
+            .hp-cal .react-calendar__month-view__weekdays__weekday {
+              padding: 8px 0;
+            }
+            .hp-cal .react-calendar__month-view__weekdays__weekday abbr {
+              text-decoration: none;
+            }
+            .hp-cal .react-calendar__tile {
+              max-width: 100%;
+              padding: 10px 4px;
+              min-height: 48px;
+              background: none;
+              border: none;
+              border-radius: 8px;
+              font-size: 14px;
+              font-weight: 500;
+              color: ${C.ink};
+              position: relative;
+            }
+            .hp-cal .react-calendar__tile:enabled:hover {
+              background: ${C.softBlue};
+            }
+            .hp-cal .react-calendar__tile--now {
+              background: ${C.softYellow};
+              font-weight: 700;
+            }
+            .hp-cal .react-calendar__tile--active {
+              background: ${C.ink} !important;
+              color: #fff !important;
+            }
+            .hp-cal .react-calendar__month-view__days__day--neighboringMonth {
+              color: ${C.inkSoft};
+              opacity: 0.45;
+            }
+            .hp-cal-dot {
+              display: block;
+              width: 6px;
+              height: 6px;
+              border-radius: 50%;
+              background: ${C.red};
+              margin: 3px auto 0;
+            }
+            .hp-cal .react-calendar__tile--active .hp-cal-dot {
+              background: #f4c64e;
+            }
+          `}</style>
+          <Calendar
+            className="hp-cal"
+            value={selectedDate}
+            onChange={setSelectedDate}
+            calendarType="gregory"
+            showNeighboringMonth
+            next2Label={null}
+            prev2Label={null}
+            tileContent={({ date, view }) => {
+              if (view !== "month") return null;
+              const key = dateKey(date);
+              if (!examByDate[key]) return null;
+              return <span className="hp-cal-dot" title={examByDate[key].join(", ")} />;
+            }}
+          />
+          <div style={{ marginTop: 14, textAlign: "center", fontFamily: bodyFont, fontWeight: 600, color: C.ink }}>
+            {selectedDate.toLocaleDateString("en-IN", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
           </div>
-          <div style={{ textAlign: "center", marginTop: 4, fontFamily: monoFont, color: C.green, fontSize: 15 }}>
-            {selectedDate.toDateString()}
-          </div>
+          {examsOnSelected.length > 0 ? (
+            <div
+              style={{
+                marginTop: 8,
+                textAlign: "center",
+                fontFamily: monoFont,
+                fontSize: 13,
+                color: C.red,
+                fontWeight: 600,
+              }}
+            >
+              Exam day: {examsOnSelected.join(" · ")}
+            </div>
+          ) : (
+            <div style={{ marginTop: 6, textAlign: "center", fontFamily: bodyFont, fontSize: 12, color: C.inkSoft }}>
+              No tracked exam on this date. Red dots mark exam days.
+            </div>
+          )}
         </div>
       )}
     </div>

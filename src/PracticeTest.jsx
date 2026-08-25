@@ -1613,25 +1613,38 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
           })}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
+            gap: 10,
+            marginBottom: 16,
+            alignItems: "center",
+          }}
+        >
           <button
             onClick={goPrev}
             disabled={!canGoPrev}
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 4,
-              padding: "8px 12px",
-              borderRadius: 8,
-              border: `1px solid ${C.line}`,
-              background: C.bg,
-              opacity: !canGoPrev ? 0.5 : 1,
-              cursor: !canGoPrev ? "default" : "pointer",
+              justifyContent: "center",
+              gap: 6,
+              padding: "12px 14px",
+              minHeight: 48,
+              borderRadius: 10,
+              border: `2px solid ${C.ink}`,
+              background: "#fff",
+              color: C.ink,
+              opacity: !canGoPrev ? 0.4 : 1,
+              cursor: !canGoPrev ? "not-allowed" : "pointer",
               fontFamily: bodyFont,
-              fontSize: 13,
+              fontSize: 14,
+              fontWeight: 700,
+              boxShadow: !canGoPrev ? "none" : "0 2px 6px rgba(20,33,61,0.12)",
             }}
           >
-            <ChevronLeft size={16} /> Prev
+            <ChevronLeft size={20} strokeWidth={2.5} /> Prev
           </button>
           <button
             onClick={() =>
@@ -1645,17 +1658,23 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 4,
-              padding: "8px 12px",
-              borderRadius: 8,
-              border: `1px solid ${flagged[qu.uid] ? C.yellow : C.line}`,
-              background: flagged[qu.uid] ? C.softYellow : C.bg,
+              justifyContent: "center",
+              gap: 6,
+              padding: "12px 16px",
+              minHeight: 48,
+              borderRadius: 10,
+              border: `2px solid ${flagged[qu.uid] ? C.yellow : C.ink}`,
+              background: flagged[qu.uid] ? C.softYellow : "#fff",
+              color: flagged[qu.uid] ? "#8a6200" : C.ink,
               cursor: "pointer",
               fontFamily: bodyFont,
-              fontSize: 13,
+              fontSize: 14,
+              fontWeight: 700,
+              boxShadow: "0 2px 6px rgba(20,33,61,0.12)",
             }}
           >
-            <Flag size={14} /> {flagged[qu.uid] ? "Flagged" : "Flag"}
+            <Flag size={18} strokeWidth={2.5} fill={flagged[qu.uid] ? C.yellow : "none"} />
+            {flagged[qu.uid] ? "Flagged" : "Flag"}
           </button>
           <button
             onClick={goNext}
@@ -1663,18 +1682,23 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 4,
-              padding: "8px 12px",
-              borderRadius: 8,
-              border: `1px solid ${C.line}`,
-              background: C.bg,
-              opacity: !canGoNext ? 0.5 : 1,
-              cursor: !canGoNext ? "default" : "pointer",
+              justifyContent: "center",
+              gap: 6,
+              padding: "12px 14px",
+              minHeight: 48,
+              borderRadius: 10,
+              border: `2px solid ${C.ink}`,
+              background: C.ink,
+              color: "#fff",
+              opacity: !canGoNext ? 0.4 : 1,
+              cursor: !canGoNext ? "not-allowed" : "pointer",
               fontFamily: bodyFont,
-              fontSize: 13,
+              fontSize: 14,
+              fontWeight: 700,
+              boxShadow: !canGoNext ? "none" : "0 2px 8px rgba(20,33,61,0.25)",
             }}
           >
-            Next <ChevronRight size={16} />
+            Next <ChevronRight size={20} strokeWidth={2.5} />
           </button>
         </div>
 
