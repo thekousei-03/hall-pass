@@ -268,7 +268,7 @@ const EXAMS = [
       },
     ],
     officialWebsite: "https://ssc.gov.in/",
-    notificationUrl: "https://ssc.gov.in/",
+    notificationUrl: "https://ssc.gov.in/for-candidates/previous-year-question-paper",
   },
   {
     id: "jee-main",
@@ -325,7 +325,7 @@ const EXAMS = [
       },
     ],
     officialWebsite: "https://jeemain.nta.nic.in/",
-    notificationUrl: "https://jeemain.nta.nic.in/",
+    notificationUrl: "https://www.nta.ac.in/Downloads",
   },
   {
     id: "gate",
@@ -418,6 +418,8 @@ const EXAMS = [
       },
     ],
     officialWebsite: "https://iimcat.ac.in/",
+    // Official CAT past papers are released mainly for candidates who appeared (login on iimcat.ac.in).
+    // NTA-style bulk archive is not public; this points students to the official CAT portal to find papers/mock.
     notificationUrl: "https://iimcat.ac.in/",
   },
   {
