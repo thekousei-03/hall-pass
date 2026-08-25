@@ -6,11 +6,17 @@ import {
     onSnapshot,
     serverTimestamp,
     limit,
+    deleteDoc,
+    doc,
+    getDocs,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
 const ATTEMPTS_COL = "testAttempts";
 
+/**
+ * Live listener – newest first (client-side sort)
+ */
 export function subscribeAttempts(userId, onData, onError) {
     if (!userId) {
         onData([]);
@@ -52,6 +58,9 @@ export function subscribeAttempts(userId, onData, onError) {
     );
 }
 
+/**
+ * Save a completed mock attempt
+ */
 export async function saveAttempt(userId, attempt) {
     if (!userId) {
         console.warn("saveAttempt: no userId");
@@ -82,4 +91,30 @@ export async function saveAttempt(userId, attempt) {
         console.error("saveAttempt failed:", err);
         throw err;
     }
+}
+
+/**
+ * Delete a single attempt
+ */
+export async function deleteAttempt(attemptId) {
+    if (!attemptId) return;
+    await deleteDoc(doc(db, ATTEMPTS_COL, attemptId));
+}
+
+/**
+ * Delete all attempts of a user
+ */
+export async function deleteAllAttempts(userId) {
+    if (!userId) return;
+
+    const q = query(
+        collection(db, ATTEMPTS_COL),
+        where("userId", "==", userId)
+    );
+    const snap = await getDocs(q);
+
+    const promises = snap.docs.map((d) =>
+        deleteDoc(doc(db, ATTEMPTS_COL, d.id))
+    );
+    await Promise.all(promises);
 }

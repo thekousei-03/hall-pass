@@ -3,7 +3,7 @@ import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
 import Auth from "./Auth";
-import PracticeTestSection from "./PracticeTest"; // still imports the component
+import PracticeTestSection from "./PracticeTest";
 import CloudFiles from "./CloudFiles";
 
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -37,12 +37,17 @@ import {
   Moon,
   Sun,
   TrendingUp,
+  Trash2,
 } from "lucide-react";
 
 import { subscribeExams } from "./services/examService";
 import { SEED_EXAMS } from "./data/seedExamsData";
 import { subscribeStarred, toggleStarred } from "./services/starredService";
-import { subscribeAttempts } from "./services/progressService";
+import {
+  subscribeAttempts,
+  deleteAttempt,
+  deleteAllAttempts,
+} from "./services/progressService";
 
 /* =========================================================
    FONTS & COLORS
@@ -112,10 +117,30 @@ const THEMES = {
 };
 
 /* =========================================================
-   PROGRESS DASHBOARD (now cloud-synced)
+   PROGRESS DASHBOARD (with delete)
 ========================================================= */
-function ProgressDashboard({ attempts, colors }) {
+function ProgressDashboard({ attempts, colors, userId }) {
   const T = colors || C;
+
+  const handleDeleteOne = async (id) => {
+    if (!window.confirm("Delete this attempt?")) return;
+    try {
+      await deleteAttempt(id);
+    } catch (err) {
+      console.error(err);
+      alert("Could not delete attempt.");
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (!window.confirm("Delete ALL your progress? This cannot be undone.")) return;
+    try {
+      await deleteAllAttempts(userId);
+    } catch (err) {
+      console.error(err);
+      alert("Could not clear progress.");
+    }
+  };
 
   if (!attempts || attempts.length === 0) {
     return (
@@ -166,12 +191,42 @@ function ProgressDashboard({ attempts, colors }) {
         marginBottom: 20,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-        <TrendingUp size={20} color={T.ink} />
-        <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: T.ink }}>
-          Your progress
-        </h2>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <TrendingUp size={20} color={T.ink} />
+          <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: T.ink }}>
+            Your progress
+          </h2>
+        </div>
+
+        <button
+          onClick={handleClearAll}
+          style={{
+            fontFamily: bodyFont,
+            fontSize: 12,
+            fontWeight: 600,
+            color: T.red,
+            background: T.softRed,
+            border: "none",
+            borderRadius: 7,
+            padding: "6px 10px",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
+          <Trash2 size={14} /> Clear all
+        </button>
       </div>
+
       <div
         style={{
           display: "grid",
@@ -199,6 +254,7 @@ function ProgressDashboard({ attempts, colors }) {
           </div>
         </div>
       </div>
+
       {topWeak.length > 0 && (
         <div style={{ marginBottom: 12 }}>
           <div
@@ -232,6 +288,7 @@ function ProgressDashboard({ attempts, colors }) {
           </div>
         </div>
       )}
+
       <div
         style={{
           fontFamily: monoFont,
@@ -244,12 +301,13 @@ function ProgressDashboard({ attempts, colors }) {
         Recent attempts
       </div>
       <div style={{ display: "grid", gap: 6 }}>
-        {attempts.slice(0, 5).map((a) => (
+        {attempts.slice(0, 8).map((a) => (
           <div
             key={a.id}
             style={{
               display: "flex",
               justifyContent: "space-between",
+              alignItems: "center",
               gap: 8,
               flexWrap: "wrap",
               padding: "8px 10px",
@@ -267,13 +325,32 @@ function ProgressDashboard({ attempts, colors }) {
                 · {a.mode === "sectional" ? "sectional" : "full"}
               </span>
             </span>
-            <span style={{ fontFamily: monoFont, fontWeight: 600 }}>
-              {a.score}/{a.maxScore}
-              <span style={{ color: T.inkSoft, fontWeight: 400 }}>
-                {" "}
-                · {a.at ? new Date(a.at).toLocaleDateString("en-IN") : ""}
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontFamily: monoFont, fontWeight: 600 }}>
+                {a.score}/{a.maxScore}
+                <span style={{ color: T.inkSoft, fontWeight: 400 }}>
+                  {" "}
+                  · {a.at ? new Date(a.at).toLocaleDateString("en-IN") : ""}
+                </span>
               </span>
-            </span>
+
+              <button
+                onClick={() => handleDeleteOne(a.id)}
+                title="Delete this attempt"
+                style={{
+                  border: "none",
+                  background: T.softRed,
+                  color: T.red,
+                  borderRadius: 6,
+                  padding: "5px 7px",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                }}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -743,8 +820,7 @@ function SyllabusPanel({ exam }) {
         Syllabus breakdown
       </h2>
       <div style={{ fontFamily: bodyFont, fontSize: 12, color: C.inkSoft, marginBottom: 12 }}>
-        Official topic outlines by stage. Always cross-check the latest notification on the official
-        site.
+        Official topic outlines by stage. Always cross-check the latest notification on the official site.
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1328,7 +1404,7 @@ export default function App() {
   }, []);
 
   /* =======================================================
-     STARRED (cloud – Step 2)
+     STARRED (cloud)
   ======================================================= */
   useEffect(() => {
     if (!user) {
@@ -1353,7 +1429,7 @@ export default function App() {
   }, [user]);
 
   /* =======================================================
-     ATTEMPTS / PROGRESS (cloud – Step 3)
+     ATTEMPTS / PROGRESS (cloud)
   ======================================================= */
   useEffect(() => {
     if (!user) {
@@ -1492,7 +1568,6 @@ export default function App() {
       if (!user) return;
       try {
         await toggleStarred(user.uid, id);
-        // onSnapshot will update the Set automatically
       } catch (err) {
         console.error("Toggle star failed:", err);
         alert("Could not update starred status. Check connection / rules.");
@@ -1697,7 +1772,9 @@ export default function App() {
           </div>
         )}
 
-        {view !== "detail" && <ProgressDashboard attempts={attempts} colors={C} />}
+        {view !== "detail" && (
+          <ProgressDashboard attempts={attempts} colors={C} userId={user.uid} />
+        )}
 
         {view === "detail" && selectedExam ? (
           <ExamDetail
