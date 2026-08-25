@@ -148,6 +148,40 @@ function q(id, section, year, text, options, correctIndex, explanation) {
   return { id, section, year, text, options, correctIndex, explanation };
 }
 
+/** Build a richer solution block for the results review. */
+function buildDetailedSolution(qu, userAns) {
+  const correctLetter = String.fromCharCode(65 + qu.correctIndex);
+  const correctText = qu.options[qu.correctIndex];
+  const parts = [];
+
+  parts.push(`Correct answer: ${correctLetter}. ${correctText}`);
+
+  if (userAns === undefined || userAns === null) {
+    parts.push("You left this question unattempted.");
+  } else if (userAns === qu.correctIndex) {
+    parts.push("You marked the correct option.");
+  } else {
+    const userLetter = String.fromCharCode(65 + userAns);
+    parts.push(
+      `You marked ${userLetter}. ${qu.options[userAns] || ""} — that does not match the correct option.`
+    );
+  }
+
+  if (qu.explanation && String(qu.explanation).trim()) {
+    parts.push(`Reasoning: ${qu.explanation}`);
+  } else {
+    parts.push(
+      "Reasoning: Compare each option against the concept tested in the question stem; eliminate options that contradict the given data or standard formula/fact."
+    );
+  }
+
+  parts.push(
+    `Tip: Revisit ${qu.sectionName || "this section"} and practice similar ${qu.year ? qu.year + "-style " : ""}items until this pattern feels automatic.`
+  );
+
+  return parts;
+}
+
 /* ---- Expanded original practice bank (year-style tags, not verbatim past papers) ---- */
 const BANK = {
   "ssc-cgl": [
@@ -1290,33 +1324,43 @@ function ResultsView({ exam, pattern, questions, answers, flagged, timeTakenSec,
                     );
                   })}
                 </div>
-                {qu.explanation && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: "12px 14px",
+                    background: C.softBlue,
+                    borderRadius: 8,
+                    borderLeft: `3px solid ${C.blue}`,
+                  }}
+                >
                   <div
                     style={{
-                      marginTop: 10,
-                      padding: "10px 12px",
-                      background: C.softBlue,
-                      borderRadius: 8,
-                      borderLeft: `3px solid ${C.blue}`,
+                      fontFamily: monoFont,
+                      fontSize: 10,
+                      color: C.blue,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.4,
+                      marginBottom: 8,
                     }}
                   >
-                    <div
-                      style={{
-                        fontFamily: monoFont,
-                        fontSize: 10,
-                        color: C.blue,
-                        textTransform: "uppercase",
-                        letterSpacing: 0.4,
-                        marginBottom: 4,
-                      }}
-                    >
-                      Explanation
-                    </div>
-                    <div style={{ fontFamily: bodyFont, fontSize: 12.5, color: C.ink, lineHeight: 1.55 }}>
-                      {qu.explanation}
-                    </div>
+                    Detailed solution
                   </div>
-                )}
+                  <div style={{ display: "grid", gap: 6 }}>
+                    {buildDetailedSolution(qu, ans).map((line, li) => (
+                      <div
+                        key={li}
+                        style={{
+                          fontFamily: bodyFont,
+                          fontSize: 12.5,
+                          color: C.ink,
+                          lineHeight: 1.55,
+                        }}
+                      >
+                        {line}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             );
           })}

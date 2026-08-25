@@ -64,6 +64,8 @@ const C = {
   softGreen: "#e5f1e9",
   softBlue: "#e8eef8",
   softYellow: "#f8efd9",
+  primary: "#14213d",
+  onPrimary: "#ffffff",
 };
 
 const OMR_BG = `radial-gradient(circle, rgba(20,33,61,0.055) 1px, transparent 1px)`;
@@ -84,6 +86,9 @@ const THEMES = {
     softGreen: "#e5f1e9",
     softBlue: "#e8eef8",
     softYellow: "#f8efd9",
+    // Fixed brand navy for headers / primary actions (never flips with text color)
+    primary: "#14213d",
+    onPrimary: "#ffffff",
     omr: OMR_BG,
   },
   dark: {
@@ -100,6 +105,8 @@ const THEMES = {
     softGreen: "#1e3328",
     softBlue: "#1a2740",
     softYellow: "#3a3020",
+    primary: "#243447",
+    onPrimary: "#ffffff",
     omr: OMR_BG_DARK,
   },
 };
@@ -830,13 +837,15 @@ function HeroPass({ trackedCount }) {
   };
 
   const examsOnSelected = examByDate[dateKey(selectedDate)] || [];
+  const brand = C.primary || "#14213d";
+  const onBrand = C.onPrimary || "#fff";
 
   return (
     <div
       style={{
         marginBottom: 18,
-        background: C.ink,
-        color: "#fff",
+        background: brand,
+        color: onBrand,
         borderRadius: 14,
         padding: "22px 20px",
         position: "relative",
@@ -1249,7 +1258,7 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
       </button>
 
       <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, overflow: "hidden" }}>
-        <div style={{ padding: 20, background: C.ink, color: "#fff" }}>
+        <div style={{ padding: 20, background: C.primary || "#14213d", color: C.onPrimary || "#fff" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 15 }}>
             <div>
               <div style={{ fontFamily: monoFont, fontSize: 10, textTransform: "uppercase", opacity: 0.65, marginBottom: 6 }}>
@@ -1361,8 +1370,8 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 6,
-                  background: C.ink,
-                  color: "#fff",
+                  background: C.primary || C.ink,
+                  color: C.onPrimary || "#fff",
                   textDecoration: "none",
                   borderRadius: 8,
                   padding: "9px 12px",
@@ -1434,26 +1443,33 @@ export default function App() {
   });
   const T = THEMES[theme] || THEMES.light;
 
+  // Apply theme colors synchronously on every render so navigating
+  // home ↔ detail never flashes the wrong palette.
+  Object.assign(C, {
+    bg: T.bg,
+    surface: T.surface,
+    ink: T.ink,
+    inkSoft: T.inkSoft,
+    line: T.line,
+    red: T.red,
+    green: T.green,
+    yellow: T.yellow,
+    blue: T.blue,
+    softRed: T.softRed,
+    softGreen: T.softGreen,
+    softBlue: T.softBlue,
+    softYellow: T.softYellow,
+    primary: T.primary,
+    onPrimary: T.onPrimary,
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem("hallpass-theme", theme);
     } catch (_) {}
-    // Sync module-level C used by cards (best-effort for shared constants)
-    Object.assign(C, {
-      bg: T.bg,
-      surface: T.surface,
-      ink: T.ink,
-      inkSoft: T.inkSoft,
-      line: T.line,
-      red: T.red,
-      green: T.green,
-      yellow: T.yellow,
-      blue: T.blue,
-      softRed: T.softRed,
-      softGreen: T.softGreen,
-      softBlue: T.softBlue,
-      softYellow: T.softYellow,
-    });
+    document.documentElement.setAttribute("data-hp-theme", theme);
+    document.body.style.background = T.bg;
+    document.body.style.color = T.ink;
   }, [theme, T]);
 
   const [starred, setStarred] = useState(new Set());
