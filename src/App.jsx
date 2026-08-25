@@ -142,7 +142,7 @@ function ProgressDashboard({ attempts, colors, userId }) {
     }
   };
 
-  if (!attempts || attempts.length === 0) {
+  if (false) {   // temporary – always show the full UI 
     return (
       <div
         style={{
