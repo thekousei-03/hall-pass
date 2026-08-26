@@ -1,6 +1,6 @@
 /**
  * Hall Pass — Full-length Mock Test (with timer)
- * Progress is now saved to Firestore (multi-device).
+ * Supports Dark Mode via colors prop
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
@@ -17,7 +17,11 @@ import {
 } from "lucide-react";
 import { saveAttempt } from "./services/progressService";
 
-const C = {
+const displayFont = "'Space Grotesk', sans-serif";
+const bodyFont = "'IBM Plex Sans', sans-serif";
+const monoFont = "'IBM Plex Mono', monospace";
+
+const DEFAULT_C = {
   bg: "#f4f1ea",
   surface: "#ffffff",
   ink: "#14213d",
@@ -32,10 +36,6 @@ const C = {
   softBlue: "#e8eef8",
   softYellow: "#f8efd9",
 };
-
-const displayFont = "'Space Grotesk', sans-serif";
-const bodyFont = "'IBM Plex Sans', sans-serif";
-const monoFont = "'IBM Plex Mono', monospace";
 
 /* ---- Exam patterns ---- */
 const EXAM_PATTERNS = {
@@ -124,52 +124,35 @@ function buildDetailedSolution(qu, userAns) {
   const correctLetter = String.fromCharCode(65 + qu.correctIndex);
   const correctText = qu.options[qu.correctIndex];
   const parts = [];
-
   parts.push(`Correct answer: ${correctLetter}. ${correctText}`);
-
   if (userAns === undefined || userAns === null) {
     parts.push("You left this question unattempted.");
   } else if (userAns === qu.correctIndex) {
     parts.push("You marked the correct option.");
   } else {
     const userLetter = String.fromCharCode(65 + userAns);
-    parts.push(
-      `You marked ${userLetter}. ${qu.options[userAns] || ""} — that does not match the correct option.`
-    );
+    parts.push(`You marked ${userLetter}. ${qu.options[userAns] || ""} — that does not match the correct option.`);
   }
-
   if (qu.explanation && String(qu.explanation).trim()) {
     parts.push(`Reasoning: ${qu.explanation}`);
   } else {
-    parts.push(
-      "Reasoning: Compare each option against the concept tested in the question stem; eliminate options that contradict the given data or standard formula/fact."
-    );
+    parts.push("Reasoning: Compare each option against the concept tested in the question stem.");
   }
-
-  parts.push(
-    `Tip: Revisit ${qu.sectionName || "this section"} and practice similar ${qu.year ? qu.year + "-style " : ""}items until this pattern feels automatic.`
-  );
-
+  parts.push(`Tip: Revisit ${qu.sectionName || "this section"} and practice similar items.`);
   return parts;
 }
 
-/* ---- Question bank (original practice items) ---- */
 const BANK = {
   "ssc-cgl": [
     q("r1", "reasoning", 2025, "If PAPER is coded as OZODQ, how is PENCIL coded?", ["ODMBHK", "ODMBHJ", "ODNAHK", "OEMBHK"], 0, "Each letter −1."),
     q("r2", "reasoning", 2024, "Series: 2, 6, 12, 20, 30, ?", ["40", "42", "44", "36"], 1, "Differences +4,+6,+8,+10,+12."),
     q("r3", "reasoning", 2023, "A is taller than B but shorter than C. D is between A and B. Shortest?", ["A", "B", "C", "D"], 1, "C > A > D > B."),
-    q("r4", "reasoning", 2022, "Odd one: 3, 5, 11, 14, 17, 21", ["14", "17", "21", "11"], 0, "14 is even."),
-    q("r5", "reasoning", 2021, "If 1 Jan 2023 was Sunday, 1 Jan 2024 was?", ["Sunday", "Monday", "Tuesday", "Saturday"], 1, "Non-leap year → +1 day."),
     q("g1", "ga", 2025, "Father of the Indian Constitution?", ["Nehru", "Ambedkar", "Rajendra Prasad", "Patel"], 1, "B.R. Ambedkar."),
     q("g2", "ga", 2024, "RBI established in?", ["1935", "1947", "1950", "1921"], 0, "1935."),
-    q("g3", "ga", 2023, "Red Planet?", ["Venus", "Mars", "Jupiter", "Mercury"], 1, "Mars."),
     q("q1", "quant", 2025, "25% of 480?", ["100", "120", "140", "160"], 1, "120."),
     q("q2", "quant", 2024, "SI on 5000 at 10% for 2 years?", ["500", "1000", "1500", "800"], 1, "1000."),
-    q("q3", "quant", 2023, "Average of 5,10,15,20,25?", ["15", "16", "14", "17"], 0, "15."),
     q("e1", "english", 2025, "Synonym of Benevolent?", ["Cruel", "Kind", "Angry", "Greedy"], 1, "Kind."),
     q("e2", "english", 2024, "Error: He don't know the answer.", ["He", "don't", "know", "No error"], 1, "doesn't."),
-    q("e3", "english", 2023, "She has lived here ___ 2019.", ["for", "since", "from", "at"], 1, "since."),
   ],
   cat: [
     q("v1", "varc", 2025, "Tone that criticises but acknowledges benefits is?", ["Hostile", "Balanced", "Celebratory", "Indifferent"], 1, "Balanced."),
@@ -201,7 +184,6 @@ const BANK = {
   ],
 };
 
-/* ---- Helpers ---- */
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -236,14 +218,10 @@ function buildPaper(examId, year, opts = {}) {
     pool = shuffle(pool);
 
     let take = sec.qCount;
-    if (isSectional) {
-      take = Math.min(sec.qCount, Math.max(8, Math.round(sec.qCount * 0.5)));
-    }
-    // Safety: don't request more than available
+    if (isSectional) take = Math.min(sec.qCount, Math.max(8, Math.round(sec.qCount * 0.5)));
     take = Math.min(take, pool.length || 5);
 
     const picked = pool.slice(0, take);
-    // If bank is small, repeat some questions so the test still runs
     while (picked.length < take && pool.length > 0) {
       picked.push(...shuffle(pool).slice(0, take - picked.length));
     }
@@ -278,9 +256,7 @@ function useTimer(totalSec, running, onExpire) {
   const expireRef = useRef(onExpire);
   expireRef.current = onExpire;
 
-  useEffect(() => {
-    setLeft(totalSec);
-  }, [totalSec]);
+  useEffect(() => setLeft(totalSec), [totalSec]);
 
   useEffect(() => {
     if (!running || totalSec <= 0) return;
@@ -299,68 +275,34 @@ function useTimer(totalSec, running, onExpire) {
 
   const m = Math.floor(left / 60);
   const s = left % 60;
-  const display = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return { display, left };
+  return {
+    display: `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`,
+    left,
+  };
 }
 
-/* =========================================================
-   RESULTS VIEW
-========================================================= */
+/* ===================== RESULTS VIEW ===================== */
 function ResultsView({
-  exam,
-  pattern,
-  questions,
-  answers,
-  flagged,
-  timeTakenSec,
-  userId,
-  mode,
-  onRetry,
-  onClose,
+  exam, pattern, questions, answers, flagged, timeTakenSec,
+  userId, mode, onRetry, onClose, C,
 }) {
   const analysis = useMemo(() => {
-    let score = 0;
-    let maxScore = 0;
-    let correct = 0;
-    let wrong = 0;
-    let skipped = 0;
+    let score = 0, maxScore = 0, correct = 0, wrong = 0, skipped = 0;
     const weakMap = {};
-    const weakQuestions = [];
-
     questions.forEach((qu) => {
       maxScore += qu.marksEach;
       const ans = answers[qu.uid];
-      const attempted = ans !== undefined && ans !== null;
-
-      if (!attempted) {
-        skipped += 1;
-        return;
-      }
-
-      if (ans === qu.correctIndex) {
-        score += qu.marksEach;
-        correct += 1;
-      } else {
-        score -= pattern.negativeMark || 0;
-        wrong += 1;
-        weakMap[qu.sectionName] = (weakMap[qu.sectionName] || 0) + 1;
-        weakQuestions.push(qu);
-      }
+      if (ans === undefined || ans === null) { skipped++; return; }
+      if (ans === qu.correctIndex) { score += qu.marksEach; correct++; }
+      else { score -= pattern.negativeMark || 0; wrong++; weakMap[qu.sectionName] = (weakMap[qu.sectionName] || 0) + 1; }
     });
-
     score = Math.max(0, Math.round(score * 100) / 100);
-
-    const weakSections = Object.entries(weakMap)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name]) => name);
-
-    return { score, maxScore, correct, wrong, skipped, weakSections, weakQuestions };
+    const weakSections = Object.entries(weakMap).sort((a, b) => b[1] - a[1]).map(([n]) => n);
+    return { score, maxScore, correct, wrong, skipped, weakSections };
   }, [questions, answers, pattern]);
 
-  // ★ Save to Firestore once
   useEffect(() => {
     if (!userId) return;
-
     saveAttempt(userId, {
       examId: exam.id,
       examName: exam.shortName || exam.name,
@@ -369,26 +311,21 @@ function ResultsView({
       maxScore: analysis.maxScore,
       weakSections: analysis.weakSections,
       timeTakenSec: timeTakenSec || null,
-    }).catch((err) => {
-      console.error("Could not save attempt:", err);
-    });
+    }).catch(console.error);
   }, [userId]);
 
   const pct = analysis.maxScore ? Math.round((analysis.score / analysis.maxScore) * 100) : 0;
+  const onPrimary = C.surface === "#ffffff" ? "#fff" : C.bg;
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, overflow: "hidden" }}>
-      <div style={{ padding: 20, background: C.ink, color: "#fff" }}>
+      <div style={{ padding: 20, background: C.ink, color: onPrimary }}>
         <div style={{ fontFamily: monoFont, fontSize: 12, opacity: 0.7 }}>RESULT</div>
-        <div style={{ fontFamily: displayFont, fontSize: 26, fontWeight: 700, marginTop: 4 }}>
-          {exam.shortName} Mock
-        </div>
+        <div style={{ fontFamily: displayFont, fontSize: 26, fontWeight: 700, marginTop: 4 }}>{exam.shortName} Mock</div>
         <div style={{ marginTop: 14, display: "flex", gap: 18, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 11, opacity: 0.65 }}>SCORE</div>
-            <div style={{ fontFamily: monoFont, fontSize: 28, fontWeight: 700 }}>
-              {analysis.score}/{analysis.maxScore}
-            </div>
+            <div style={{ fontFamily: monoFont, fontSize: 28, fontWeight: 700 }}>{analysis.score}/{analysis.maxScore}</div>
           </div>
           <div>
             <div style={{ fontSize: 11, opacity: 0.65 }}>ACCURACY</div>
@@ -404,62 +341,33 @@ function ResultsView({
       </div>
 
       <div style={{ padding: 18 }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))",
-            gap: 8,
-            marginBottom: 16,
-          }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 8, marginBottom: 16 }}>
           <div style={{ background: C.softGreen, borderRadius: 10, padding: 10, textAlign: "center" }}>
             <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft }}>CORRECT</div>
-            <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700, color: C.green }}>
-              {analysis.correct}
-            </div>
+            <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700, color: C.green }}>{analysis.correct}</div>
           </div>
           <div style={{ background: C.softRed, borderRadius: 10, padding: 10, textAlign: "center" }}>
             <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft }}>WRONG</div>
-            <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700, color: C.red }}>
-              {analysis.wrong}
-            </div>
+            <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700, color: C.red }}>{analysis.wrong}</div>
           </div>
           <div style={{ background: C.softYellow, borderRadius: 10, padding: 10, textAlign: "center" }}>
             <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft }}>SKIPPED</div>
-            <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700, color: C.yellow }}>
-              {analysis.skipped}
-            </div>
+            <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700, color: C.yellow }}>{analysis.skipped}</div>
           </div>
         </div>
 
         {analysis.weakSections.length > 0 && (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontFamily: monoFont, fontSize: 11, color: C.inkSoft, marginBottom: 6 }}>
-              WEAK SECTIONS
-            </div>
+            <div style={{ fontFamily: monoFont, fontSize: 11, color: C.inkSoft, marginBottom: 6 }}>WEAK SECTIONS</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {analysis.weakSections.map((s) => (
-                <span
-                  key={s}
-                  style={{
-                    background: C.softRed,
-                    color: C.red,
-                    borderRadius: 16,
-                    padding: "5px 10px",
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
-                >
-                  {s}
-                </span>
+                <span key={s} style={{ background: C.softRed, color: C.red, borderRadius: 16, padding: "5px 10px", fontSize: 12, fontWeight: 600 }}>{s}</span>
               ))}
             </div>
           </div>
         )}
 
-        <div style={{ fontFamily: displayFont, fontSize: 16, fontWeight: 700, marginBottom: 10, color: C.ink }}>
-          Answer review
-        </div>
+        <div style={{ fontFamily: displayFont, fontSize: 16, fontWeight: 700, marginBottom: 10, color: C.ink }}>Answer review</div>
         <div style={{ display: "grid", gap: 10 }}>
           {questions.map((qu) => {
             const ans = answers[qu.uid];
@@ -467,52 +375,30 @@ function ResultsView({
             const isRight = attempted && ans === qu.correctIndex;
             const isWrong = attempted && ans !== qu.correctIndex;
             return (
-              <div
-                key={qu.uid}
-                style={{
-                  border: `1px solid ${isRight ? C.green + "55" : isWrong ? C.red + "55" : C.line}`,
-                  background: isRight ? C.softGreen : isWrong ? C.softRed : C.surface,
-                  borderRadius: 10,
-                  padding: 12,
-                }}
-              >
+              <div key={qu.uid} style={{
+                border: `1px solid ${isRight ? C.green + "55" : isWrong ? C.red + "55" : C.line}`,
+                background: isRight ? C.softGreen : isWrong ? C.softRed : C.surface,
+                borderRadius: 10, padding: 12,
+              }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <span style={{ fontFamily: monoFont, fontSize: 11, color: C.inkSoft }}>
-                    Q{qu.qNum} · {qu.sectionName}
-                    {qu.year ? ` · ${qu.year}-style` : ""}
-                    {flagged[qu.uid] ? " · flagged" : ""}
+                    Q{qu.qNum} · {qu.sectionName}{flagged[qu.uid] ? " · flagged" : ""}
                   </span>
                   {isRight && <CheckCircle2 size={18} color={C.green} />}
                   {isWrong && <XCircle size={18} color={C.red} />}
-                  {!attempted && (
-                    <span style={{ fontFamily: monoFont, fontSize: 11, color: C.inkSoft }}>Skipped</span>
-                  )}
                 </div>
-                <div style={{ fontFamily: bodyFont, fontSize: 13.5, color: C.ink, marginBottom: 8 }}>
-                  {qu.text}
-                </div>
+                <div style={{ fontFamily: bodyFont, fontSize: 13.5, color: C.ink, marginBottom: 8 }}>{qu.text}</div>
                 <div style={{ display: "grid", gap: 4 }}>
                   {qu.options.map((opt, i) => {
                     const isCorrectOpt = i === qu.correctIndex;
                     const isUserOpt = i === ans;
                     return (
-                      <div
-                        key={i}
-                        style={{
-                          fontFamily: bodyFont,
-                          fontSize: 12.5,
-                          padding: "6px 10px",
-                          borderRadius: 8,
-                          background: isCorrectOpt
-                            ? C.softGreen
-                            : isUserOpt && isWrong
-                              ? C.softRed
-                              : "#fff",
-                          border: `1px solid ${
-                            isCorrectOpt ? C.green : isUserOpt && isWrong ? C.red : C.line
-                          }`,
-                        }}
-                      >
+                      <div key={i} style={{
+                        fontFamily: bodyFont, fontSize: 12.5, padding: "6px 10px", borderRadius: 8,
+                        background: isCorrectOpt ? C.softGreen : isUserOpt && isWrong ? C.softRed : C.bg,
+                        border: `1px solid ${isCorrectOpt ? C.green : isUserOpt && isWrong ? C.red : C.line}`,
+                        color: C.ink,
+                      }}>
                         {String.fromCharCode(65 + i)}. {opt}
                         {isCorrectOpt ? " ✓" : ""}
                         {isUserOpt && isWrong ? " (your answer)" : ""}
@@ -520,98 +406,38 @@ function ResultsView({
                     );
                   })}
                 </div>
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: "12px 14px",
-                    background: C.softBlue,
-                    borderRadius: 8,
-                    borderLeft: `3px solid ${C.blue}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: monoFont,
-                      fontSize: 10,
-                      color: C.blue,
-                      textTransform: "uppercase",
-                      letterSpacing: 0.4,
-                      marginBottom: 8,
-                    }}
-                  >
-                    Detailed solution
-                  </div>
-                  <div style={{ display: "grid", gap: 6 }}>
-                    {buildDetailedSolution(qu, ans).map((line, li) => (
-                      <div
-                        key={li}
-                        style={{
-                          fontFamily: bodyFont,
-                          fontSize: 12.5,
-                          color: C.ink,
-                          lineHeight: 1.55,
-                        }}
-                      >
-                        {line}
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
             );
           })}
         </div>
 
         <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
-          <button
-            onClick={onRetry}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              background: C.ink,
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              padding: "10px 14px",
-              cursor: "pointer",
-              fontFamily: bodyFont,
-              fontWeight: 600,
-            }}
-          >
+          <button onClick={onRetry} style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: C.ink, color: onPrimary, border: "none", borderRadius: 8,
+            padding: "10px 14px", cursor: "pointer", fontFamily: bodyFont, fontWeight: 600,
+          }}>
             <RotateCcw size={15} /> Retake
           </button>
-          <button
-            onClick={onClose}
-            style={{
-              background: C.bg,
-              border: `1px solid ${C.line}`,
-              borderRadius: 8,
-              padding: "10px 14px",
-              cursor: "pointer",
-              fontFamily: bodyFont,
-              fontWeight: 600,
-            }}
-          >
+          <button onClick={onClose} style={{
+            background: C.bg, border: `1px solid ${C.line}`, borderRadius: 8,
+            padding: "10px 14px", cursor: "pointer", fontFamily: bodyFont, fontWeight: 600, color: C.ink,
+          }}>
             Close
           </button>
         </div>
-        <p style={{ marginTop: 14, fontSize: 11.5, color: C.inkSoft }}>
-          Progress is saved to your account and syncs across devices.
-        </p>
       </div>
     </div>
   );
 }
 
-/* =========================================================
-   LIVE TEST
-========================================================= */
-function LiveTest({ exam, paper, onSubmit, onAbort }) {
+/* ===================== LIVE TEST ===================== */
+function LiveTest({ exam, paper, onSubmit, onAbort, C }) {
   const { pattern, questions } = paper;
   const sections = pattern.sections || [];
   const locked = !!pattern.sectionalTimer;
   const totalSec = pattern.totalTimeMin * 60;
+  const onPrimary = C.surface === "#ffffff" ? "#fff" : C.bg;
 
   const sectionRanges = useMemo(() => {
     const ranges = [];
@@ -619,12 +445,9 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
     sections.forEach((sec) => {
       const count = questions.filter((q) => q.sectionId === sec.id).length;
       ranges.push({
-        id: sec.id,
-        name: sec.name,
+        id: sec.id, name: sec.name,
         timeMin: sec.timeMin || Math.round(pattern.totalTimeMin / Math.max(sections.length, 1)),
-        start,
-        end: start + count - 1,
-        qCount: count,
+        start, end: start + count - 1, qCount: count,
       });
       start += count;
     });
@@ -636,7 +459,6 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
   const [answers, setAnswers] = useState({});
   const [flagged, setFlagged] = useState({});
   const [running, setRunning] = useState(true);
-  const [sectionFlash, setSectionFlash] = useState(null);
   const startRef = useRef(Date.now());
   const answersRef = useRef(answers);
   const flaggedRef = useRef(flagged);
@@ -649,453 +471,151 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
   const submit = useCallback(() => {
     setRunning(false);
     const timeTakenSec = Math.min(totalSec, Math.round((Date.now() - startRef.current) / 1000));
-    onSubmit({
-      answers: answersRef.current,
-      flagged: flaggedRef.current,
-      timeTakenSec,
-    });
+    onSubmit({ answers: answersRef.current, flagged: flaggedRef.current, timeTakenSec });
   }, [onSubmit, totalSec]);
 
   const advanceSection = useCallback(() => {
     setSectionIdx((si) => {
       const next = si + 1;
-      if (next >= sectionRanges.length) {
-        setTimeout(() => submit(), 0);
-        return si;
-      }
-      const range = sectionRanges[next];
-      setIdx(range.start);
-      setSectionFlash(`Section time up — moved to ${range.name}`);
-      setTimeout(() => setSectionFlash(null), 3500);
+      if (next >= sectionRanges.length) { setTimeout(() => submit(), 0); return si; }
+      setIdx(sectionRanges[next].start);
       return next;
     });
   }, [sectionRanges, submit]);
 
   const { display: overallDisplay, left: overallLeft } = useTimer(totalSec, running, submit);
-
-  const onSectionExpire = useCallback(() => {
-    if (!running || !locked) return;
-    advanceSection();
-  }, [running, locked, advanceSection]);
-
   const { display: sectionDisplay, left: sectionLeft } = useTimer(
-    locked ? sectionSec : 0,
-    running && locked && !!currentRange,
-    onSectionExpire
+    locked ? sectionSec : 0, running && locked && !!currentRange, advanceSection
   );
 
-  useEffect(() => {
-    if (!locked || !currentRange) return;
-    if (idx < currentRange.start || idx > currentRange.end) {
-      setIdx(currentRange.start);
-    }
-  }, [locked, currentRange, idx]);
-
-  useEffect(() => {
-    if (locked || !sectionRanges.length) return;
-    const found = sectionRanges.findIndex((r) => idx >= r.start && idx <= r.end);
-    if (found >= 0 && found !== sectionIdx) setSectionIdx(found);
-  }, [locked, idx, sectionRanges, sectionIdx]);
-
   const timePct = totalSec > 0 ? Math.max(0, Math.min(100, (overallLeft / totalSec) * 100)) : 0;
-  const sectionPct =
-    locked && sectionSec > 0
-      ? Math.max(0, Math.min(100, (sectionLeft / sectionSec) * 100))
-      : timePct;
+  const sectionPct = locked && sectionSec > 0 ? Math.max(0, Math.min(100, (sectionLeft / sectionSec) * 100)) : timePct;
   const primaryLeft = locked ? sectionLeft : overallLeft;
-  const timerColor =
-    primaryLeft < 60 ? "#f0a0a0" : primaryLeft < 300 ? "#f5d76e" : "#8fdfb0";
-  const barColor =
-    primaryLeft < 60 ? C.red : primaryLeft < 300 ? C.yellow : C.green;
+  const timerColor = primaryLeft < 60 ? "#f0a0a0" : primaryLeft < 300 ? "#f5d76e" : "#8fdfb0";
+  const barColor = primaryLeft < 60 ? C.red : primaryLeft < 300 ? C.yellow : C.green;
 
   const qu = questions[idx];
   const answeredCount = Object.keys(answers).filter((k) => answers[k] != null).length;
-
   const canGoPrev = locked ? idx > (currentRange?.start ?? 0) : idx > 0;
-  const canGoNext = locked
-    ? idx < (currentRange?.end ?? questions.length - 1)
-    : idx < questions.length - 1;
-
-  const goPrev = () => {
-    if (!canGoPrev) return;
-    setIdx((i) => i - 1);
-  };
-  const goNext = () => {
-    if (!canGoNext) return;
-    setIdx((i) => i + 1);
-  };
-
-  const jumpTo = (i) => {
-    if (locked && currentRange && (i < currentRange.start || i > currentRange.end)) return;
-    setIdx(i);
-  };
-
-  const finishSectionEarly = () => {
-    if (!locked) return;
-    if (sectionIdx >= sectionRanges.length - 1) {
-      if (window.confirm("This is the last section. Submit the mock test?")) submit();
-      return;
-    }
-    const next = sectionRanges[sectionIdx + 1];
-    if (
-      window.confirm(
-        `Finish "${currentRange?.name}" and start "${next.name}"? You cannot return to this section.`
-      )
-    ) {
-      setSectionIdx(sectionIdx + 1);
-      setIdx(next.start);
-    }
-  };
+  const canGoNext = locked ? idx < (currentRange?.end ?? questions.length - 1) : idx < questions.length - 1;
 
   if (!qu) return null;
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, overflow: "hidden" }}>
-      <div style={{ padding: "12px 16px 0", background: C.ink, color: "#fff" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 10,
-            paddingBottom: 10,
-          }}
-        >
+      <div style={{ padding: "12px 16px 0", background: C.ink, color: onPrimary }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, paddingBottom: 10 }}>
           <div>
             <div style={{ fontFamily: monoFont, fontSize: 11, opacity: 0.7 }}>{pattern.label}</div>
-            <div style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 16 }}>
-              {exam.shortName} Mock
-            </div>
-            {currentRange && sections.length > 1 && (
-              <div style={{ fontFamily: bodyFont, fontSize: 12, opacity: 0.8, marginTop: 4 }}>
-                Section {sectionIdx + 1}/{sections.length}: {currentRange.name}
-                {locked ? " · locked timer" : ""}
-              </div>
-            )}
+            <div style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 16 }}>{exam.shortName} Mock</div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-            {locked && currentRange && (
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {locked && (
               <div style={{ textAlign: "right" }}>
-                <div
-                  style={{
-                    fontFamily: monoFont,
-                    fontSize: 22,
-                    fontWeight: 700,
-                    color: timerColor,
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  <Clock size={15} style={{ display: "inline", marginRight: 5, verticalAlign: -2 }} />
-                  {sectionDisplay}
-                </div>
-                <div style={{ fontSize: 10, opacity: 0.65 }}>
-                  Section · {Math.round(sectionPct)}% left
+                <div style={{ fontFamily: monoFont, fontSize: 22, fontWeight: 700, color: timerColor }}>
+                  <Clock size={15} style={{ display: "inline", marginRight: 5 }} />{sectionDisplay}
                 </div>
               </div>
             )}
             <div style={{ textAlign: "right" }}>
-              <div
-                style={{
-                  fontFamily: monoFont,
-                  fontSize: locked ? 16 : 24,
-                  fontWeight: 700,
-                  color: locked ? "rgba(255,255,255,0.85)" : timerColor,
-                  letterSpacing: 0.5,
-                }}
-              >
-                {!locked && (
-                  <Clock size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -3 }} />
-                )}
+              <div style={{ fontFamily: monoFont, fontSize: locked ? 16 : 24, fontWeight: 700, color: locked ? "rgba(255,255,255,0.85)" : timerColor }}>
                 {overallDisplay}
               </div>
-              <div style={{ fontSize: 10, opacity: 0.65 }}>
-                {locked
-                  ? "Overall"
-                  : `${answeredCount}/${questions.length} answered · ${Math.round(timePct)}% left`}
-              </div>
             </div>
-            <button
-              onClick={() => {
-                if (window.confirm("Submit the mock test now?")) submit();
-              }}
-              style={{
-                background: C.green,
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "8px 12px",
-                cursor: "pointer",
-                fontFamily: bodyFont,
-                fontWeight: 600,
-                fontSize: 12,
-              }}
-            >
+            <button onClick={() => { if (window.confirm("Submit now?")) submit(); }}
+              style={{ background: C.green, color: "#fff", border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontWeight: 600, fontSize: 12 }}>
               Submit
             </button>
           </div>
         </div>
-
-        <div style={{ height: 5, background: "rgba(255,255,255,0.15)", overflow: "hidden" }}>
-          <div
-            style={{
-              height: "100%",
-              width: `${locked ? sectionPct : timePct}%`,
-              background: barColor,
-              transition: "width 1s linear, background 0.3s ease",
-            }}
-          />
+        <div style={{ height: 5, background: "rgba(255,255,255,0.15)" }}>
+          <div style={{ height: "100%", width: `${locked ? sectionPct : timePct}%`, background: barColor, transition: "width 1s linear" }} />
         </div>
-
-        {sectionRanges.length > 1 && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "10px 0 8px" }}>
-            {sectionRanges.map((r, i) => {
-              const done = locked && i < sectionIdx;
-              const active = i === sectionIdx;
-              const answeredInSec = questions
-                .slice(r.start, r.end + 1)
-                .filter((q) => answers[q.uid] != null).length;
-              return (
-                <div
-                  key={r.id}
-                  style={{
-                    fontFamily: monoFont,
-                    fontSize: 10,
-                    padding: "4px 8px",
-                    borderRadius: 6,
-                    background: active
-                      ? "rgba(255,255,255,0.2)"
-                      : done
-                        ? "rgba(60,122,87,0.35)"
-                        : "rgba(255,255,255,0.08)",
-                    border: active ? "1px solid rgba(255,255,255,0.45)" : "1px solid transparent",
-                    opacity: done ? 0.75 : 1,
-                  }}
-                >
-                  {r.name.length > 14 ? r.name.slice(0, 13) + "…" : r.name}
-                  {" · "}
-                  {answeredInSec}/{r.qCount}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {sectionFlash && (
-          <div
-            style={{
-              fontFamily: bodyFont,
-              fontSize: 12,
-              color: "#f5d76e",
-              padding: "4px 0 8px",
-              textAlign: "center",
-            }}
-          >
-            {sectionFlash}
-          </div>
-        )}
       </div>
 
       <div style={{ padding: 16 }}>
         <div style={{ fontFamily: monoFont, fontSize: 11, color: C.inkSoft, marginBottom: 6 }}>
           Q{qu.qNum}/{questions.length} · {qu.sectionName} · +{qu.marksEach}
-          {pattern.negativeMark ? ` / −${pattern.negativeMark}` : ""}
-          {qu.year ? ` · ${qu.year}-style` : ""}
         </div>
-        <div style={{ fontFamily: bodyFont, fontSize: 15, color: C.ink, lineHeight: 1.5, marginBottom: 14 }}>
-          {qu.text}
-        </div>
+        <div style={{ fontFamily: bodyFont, fontSize: 15, color: C.ink, lineHeight: 1.5, marginBottom: 14 }}>{qu.text}</div>
 
         <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
           {qu.options.map((opt, i) => {
             const selected = answers[qu.uid] === i;
             return (
-              <button
-                key={i}
-                onClick={() => setAnswers((p) => ({ ...p, [qu.uid]: i }))}
+              <button key={i} onClick={() => setAnswers((p) => ({ ...p, [qu.uid]: i }))}
                 style={{
-                  textAlign: "left",
-                  padding: "10px 12px",
-                  borderRadius: 10,
+                  textAlign: "left", padding: "10px 12px", borderRadius: 10,
                   border: `2px solid ${selected ? C.blue : C.line}`,
-                  background: selected ? C.softBlue : "#fff",
-                  cursor: "pointer",
-                  fontFamily: bodyFont,
-                  fontSize: 13.5,
-                  color: C.ink,
-                }}
-              >
-                <span style={{ fontFamily: monoFont, fontWeight: 700, marginRight: 8 }}>
-                  {String.fromCharCode(65 + i)}.
-                </span>
+                  background: selected ? C.softBlue : C.bg,
+                  cursor: "pointer", fontFamily: bodyFont, fontSize: 13.5, color: C.ink,
+                }}>
+                <span style={{ fontFamily: monoFont, fontWeight: 700, marginRight: 8 }}>{String.fromCharCode(65 + i)}.</span>
                 {opt}
               </button>
             );
           })}
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr auto 1fr",
-            gap: 10,
-            marginBottom: 16,
-            alignItems: "center",
-          }}
-        >
-          <button
-            onClick={goPrev}
-            disabled={!canGoPrev}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 10, marginBottom: 16 }}>
+          <button onClick={() => canGoPrev && setIdx((i) => i - 1)} disabled={!canGoPrev}
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              padding: "12px 14px",
-              minHeight: 48,
-              borderRadius: 10,
-              border: `2px solid ${C.ink}`,
-              background: "#fff",
-              color: C.ink,
-              opacity: !canGoPrev ? 0.4 : 1,
-              cursor: !canGoPrev ? "not-allowed" : "pointer",
-              fontFamily: bodyFont,
-              fontSize: 14,
-              fontWeight: 700,
-            }}
-          >
-            <ChevronLeft size={20} strokeWidth={2.5} /> Prev
+              padding: "12px 14px", borderRadius: 10, border: `2px solid ${C.ink}`,
+              background: C.bg, color: C.ink, opacity: !canGoPrev ? 0.4 : 1,
+              cursor: !canGoPrev ? "not-allowed" : "pointer", fontWeight: 700,
+            }}>
+            <ChevronLeft size={20} /> Prev
           </button>
-          <button
-            onClick={() =>
-              setFlagged((f) => {
-                const n = { ...f };
-                if (n[qu.uid]) delete n[qu.uid];
-                else n[qu.uid] = true;
-                return n;
-              })
-            }
+          <button onClick={() => setFlagged((f) => {
+            const n = { ...f }; if (n[qu.uid]) delete n[qu.uid]; else n[qu.uid] = true; return n;
+          })}
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              padding: "12px 16px",
-              minHeight: 48,
-              borderRadius: 10,
+              padding: "12px 16px", borderRadius: 10,
               border: `2px solid ${flagged[qu.uid] ? C.yellow : C.ink}`,
-              background: flagged[qu.uid] ? C.softYellow : "#fff",
-              color: flagged[qu.uid] ? "#8a6200" : C.ink,
-              cursor: "pointer",
-              fontFamily: bodyFont,
-              fontSize: 14,
-              fontWeight: 700,
-            }}
-          >
-            <Flag size={18} strokeWidth={2.5} fill={flagged[qu.uid] ? C.yellow : "none"} />
+              background: flagged[qu.uid] ? C.softYellow : C.bg,
+              color: flagged[qu.uid] ? "#8a6200" : C.ink, cursor: "pointer", fontWeight: 700,
+            }}>
+            <Flag size={18} fill={flagged[qu.uid] ? C.yellow : "none"} />
             {flagged[qu.uid] ? "Flagged" : "Flag"}
           </button>
-          <button
-            onClick={goNext}
-            disabled={!canGoNext}
+          <button onClick={() => canGoNext && setIdx((i) => i + 1)} disabled={!canGoNext}
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              padding: "12px 14px",
-              minHeight: 48,
-              borderRadius: 10,
-              border: `2px solid ${C.ink}`,
-              background: C.ink,
-              color: "#fff",
-              opacity: !canGoNext ? 0.4 : 1,
-              cursor: !canGoNext ? "not-allowed" : "pointer",
-              fontFamily: bodyFont,
-              fontSize: 14,
-              fontWeight: 700,
-            }}
-          >
-            Next <ChevronRight size={20} strokeWidth={2.5} />
+              padding: "12px 14px", borderRadius: 10, border: `2px solid ${C.ink}`,
+              background: C.ink, color: onPrimary, opacity: !canGoNext ? 0.4 : 1,
+              cursor: !canGoNext ? "not-allowed" : "pointer", fontWeight: 700,
+            }}>
+            Next <ChevronRight size={20} />
           </button>
         </div>
 
-        {locked && (
-          <button
-            type="button"
-            onClick={finishSectionEarly}
-            style={{
-              width: "100%",
-              marginBottom: 14,
-              padding: "9px 12px",
-              borderRadius: 8,
-              border: `1px solid ${C.line}`,
-              background: C.softBlue,
-              color: C.ink,
-              cursor: "pointer",
-              fontFamily: bodyFont,
-              fontSize: 12.5,
-              fontWeight: 600,
-            }}
-          >
-            {sectionIdx >= sectionRanges.length - 1
-              ? "Finish last section & submit"
-              : `Finish section → next (${sectionRanges[sectionIdx + 1]?.name || ""})`}
-          </button>
-        )}
-
-        <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, marginBottom: 6 }}>
-          QUESTION PALETTE
-          {locked ? " · current section only" : ""}
-        </div>
+        <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, marginBottom: 6 }}>QUESTION PALETTE</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {questions.map((item, i) => {
             const answered = answers[item.uid] != null;
             const isFlag = flagged[item.uid];
             const isCurrent = i === idx;
-            const inCurrentSection =
-              !currentRange || (i >= currentRange.start && i <= currentRange.end);
-            const disabled = locked && !inCurrentSection;
+            const inCurrent = !currentRange || (i >= currentRange.start && i <= currentRange.end);
+            const disabled = locked && !inCurrent;
             return (
-              <button
-                key={item.uid}
-                onClick={() => jumpTo(i)}
-                disabled={disabled}
+              <button key={item.uid} onClick={() => !disabled && setIdx(i)} disabled={disabled}
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 6,
+                  width: 32, height: 32, borderRadius: 6,
                   border: isCurrent ? `2px solid ${C.ink}` : `1px solid ${C.line}`,
                   background: isFlag ? C.softYellow : answered ? C.softGreen : C.bg,
-                  fontFamily: monoFont,
-                  fontSize: 11,
+                  fontFamily: monoFont, fontSize: 11,
                   cursor: disabled ? "not-allowed" : "pointer",
-                  color: disabled ? C.inkSoft : C.ink,
-                  opacity: disabled ? 0.45 : 1,
-                }}
-              >
+                  color: disabled ? C.inkSoft : C.ink, opacity: disabled ? 0.45 : 1,
+                }}>
                 {i + 1}
               </button>
             );
           })}
         </div>
 
-        <div style={{ marginTop: 12, fontFamily: bodyFont, fontSize: 12, color: C.inkSoft }}>
-          {answeredCount}/{questions.length} answered overall
-        </div>
-
-        <button
-          onClick={onAbort}
-          style={{
-            marginTop: 12,
-            background: "transparent",
-            border: "none",
-            color: C.red,
-            cursor: "pointer",
-            fontFamily: bodyFont,
-            fontSize: 12,
-          }}
-        >
+        <button onClick={onAbort} style={{
+          marginTop: 16, background: "transparent", border: "none",
+          color: C.red, cursor: "pointer", fontFamily: bodyFont, fontSize: 12,
+        }}>
           Abort test
         </button>
       </div>
@@ -1103,201 +623,99 @@ function LiveTest({ exam, paper, onSubmit, onAbort }) {
   );
 }
 
-/* =========================================================
-   LOBBY
-========================================================= */
-function MockLobby({
-  exam,
-  selectedYear,
-  onYearChange,
-  onStart,
-  mode,
-  onModeChange,
-  sectionId,
-  onSectionChange,
-}) {
+/* ===================== LOBBY ===================== */
+function MockLobby({ exam, selectedYear, onYearChange, onStart, mode, onModeChange, sectionId, onSectionChange, C }) {
   const pattern = EXAM_PATTERNS[exam.id] || EXAM_PATTERNS["ssc-cgl"];
   const isSectional = mode === "sectional";
-  const activeSec = isSectional
-    ? pattern.sections.find((s) => s.id === sectionId) || pattern.sections[0]
-    : null;
-  const totalQ =
-    isSectional && activeSec
-      ? Math.min(activeSec.qCount, Math.max(8, Math.round(activeSec.qCount * 0.5)))
-      : pattern.sections.reduce((a, s) => a + s.qCount, 0);
-  const maxMarks =
-    isSectional && activeSec
-      ? totalQ * activeSec.marksEach
-      : pattern.sections.reduce((a, s) => a + s.qCount * s.marksEach, 0);
-  const timerMin =
-    isSectional && activeSec
-      ? Math.max(8, Math.round((activeSec.timeMin || 15) * 0.6))
-      : pattern.totalTimeMin;
+  const activeSec = isSectional ? pattern.sections.find((s) => s.id === sectionId) || pattern.sections[0] : null;
+  const totalQ = isSectional && activeSec
+    ? Math.min(activeSec.qCount, Math.max(8, Math.round(activeSec.qCount * 0.5)))
+    : pattern.sections.reduce((a, s) => a + s.qCount, 0);
+  const maxMarks = isSectional && activeSec
+    ? totalQ * activeSec.marksEach
+    : pattern.sections.reduce((a, s) => a + s.qCount * s.marksEach, 0);
+  const timerMin = isSectional && activeSec
+    ? Math.max(8, Math.round((activeSec.timeMin || 15) * 0.6))
+    : pattern.totalTimeMin;
+  const onPrimary = C.surface === "#ffffff" ? "#fff" : C.bg;
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, padding: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <ListChecks size={20} color={C.ink} />
         <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 18, color: C.ink }}>
-          {isSectional ? "Sectional short test" : "Full-length mock · year-wise"}
+          {isSectional ? "Sectional short test" : "Full-length mock"}
         </h2>
       </div>
-      <p style={{ margin: "0 0 14px", fontFamily: bodyFont, fontSize: 13, color: C.inkSoft, lineHeight: 1.55 }}>
-        Original practice items (not verbatim past papers). Progress saves to your account.
-      </p>
 
       <div style={{ marginBottom: 14 }}>
-        <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, textTransform: "uppercase", marginBottom: 8 }}>
-          Test type
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {[
-            { id: "full", label: "Full mock" },
-            { id: "sectional", label: "Sectional short" },
-          ].map((m) => {
-            const active = mode === m.id;
-            return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => onModeChange(m.id)}
-                style={{
-                  fontFamily: bodyFont,
-                  fontSize: 13,
-                  fontWeight: active ? 600 : 400,
-                  color: active ? "#fff" : C.ink,
-                  background: active ? C.ink : C.bg,
-                  border: `1px solid ${active ? C.ink : C.line}`,
-                  borderRadius: 20,
-                  padding: "7px 14px",
-                  cursor: "pointer",
-                }}
-              >
-                {m.label}
-              </button>
-            );
-          })}
+        <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, marginBottom: 8 }}>TEST TYPE</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {["full", "sectional"].map((m) => (
+            <button key={m} onClick={() => onModeChange(m)}
+              style={{
+                fontFamily: bodyFont, fontSize: 13, fontWeight: mode === m ? 600 : 400,
+                color: mode === m ? onPrimary : C.ink,
+                background: mode === m ? C.ink : C.bg,
+                border: `1px solid ${mode === m ? C.ink : C.line}`,
+                borderRadius: 20, padding: "7px 14px", cursor: "pointer",
+              }}>
+              {m === "full" ? "Full mock" : "Sectional short"}
+            </button>
+          ))}
         </div>
       </div>
 
       {isSectional && pattern.sections.length > 1 && (
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, textTransform: "uppercase", marginBottom: 8 }}>
-            Section
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {pattern.sections.map((s) => {
-              const active = (sectionId || pattern.sections[0].id) === s.id;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => onSectionChange(s.id)}
-                  style={{
-                    fontFamily: bodyFont,
-                    fontSize: 12.5,
-                    fontWeight: active ? 600 : 400,
-                    color: active ? "#fff" : C.ink,
-                    background: active ? C.blue : C.bg,
-                    border: `1px solid ${active ? C.blue : C.line}`,
-                    borderRadius: 20,
-                    padding: "6px 12px",
-                    cursor: "pointer",
-                  }}
-                >
-                  {s.name}
-                </button>
-              );
-            })}
+          <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, marginBottom: 8 }}>SECTION</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {pattern.sections.map((s) => (
+              <button key={s.id} onClick={() => onSectionChange(s.id)}
+                style={{
+                  fontFamily: bodyFont, fontSize: 12.5, fontWeight: sectionId === s.id ? 600 : 400,
+                  color: sectionId === s.id ? "#fff" : C.ink,
+                  background: sectionId === s.id ? C.blue : C.bg,
+                  border: `1px solid ${sectionId === s.id ? C.blue : C.line}`,
+                  borderRadius: 20, padding: "6px 12px", cursor: "pointer",
+                }}>
+                {s.name}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft, textTransform: "uppercase", marginBottom: 8 }}>
-          Select year (style)
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {YEAR_OPTIONS.map((y) => {
-            const active = selectedYear === y;
-            return (
-              <button
-                key={String(y)}
-                type="button"
-                onClick={() => onYearChange(y)}
-                style={{
-                  fontFamily: bodyFont,
-                  fontSize: 13,
-                  fontWeight: active ? 600 : 400,
-                  color: active ? "#fff" : C.ink,
-                  background: active ? C.ink : C.bg,
-                  border: `1px solid ${active ? C.ink : C.line}`,
-                  borderRadius: 20,
-                  padding: "7px 14px",
-                  cursor: "pointer",
-                }}
-              >
-                {y === "all" ? "All years" : y}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginBottom: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8, marginBottom: 16 }}>
         <div style={{ background: C.softBlue, borderRadius: 10, padding: 10 }}>
           <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft }}>QUESTIONS</div>
-          <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700 }}>{totalQ}</div>
+          <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700, color: C.ink }}>{totalQ}</div>
         </div>
         <div style={{ background: C.softGreen, borderRadius: 10, padding: 10 }}>
           <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft }}>TIMER</div>
-          <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700 }}>{timerMin} min</div>
+          <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700, color: C.ink }}>{timerMin} min</div>
         </div>
         <div style={{ background: C.softYellow, borderRadius: 10, padding: 10 }}>
           <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft }}>MAX MARKS</div>
-          <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700 }}>{maxMarks}</div>
-        </div>
-        <div style={{ background: C.softRed, borderRadius: 10, padding: 10 }}>
-          <div style={{ fontFamily: monoFont, fontSize: 10, color: C.inkSoft }}>NEGATIVE</div>
-          <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700 }}>−{pattern.negativeMark}</div>
+          <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700, color: C.ink }}>{maxMarks}</div>
         </div>
       </div>
 
-      <button
-        onClick={onStart}
-        style={{
-          width: "100%",
-          marginTop: 16,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          background: C.ink,
-          color: "#fff",
-          border: "none",
-          borderRadius: 10,
-          padding: "12px 16px",
-          cursor: "pointer",
-          fontFamily: bodyFont,
-          fontWeight: 600,
-          fontSize: 14,
-        }}
-      >
-        <Play size={18} />{" "}
-        {isSectional
-          ? `Start ${activeSec?.name || "section"} short test`
-          : selectedYear === "all"
-            ? "Start full mock"
-            : `Start ${selectedYear}-style full mock`}
+      <button onClick={onStart} style={{
+        width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        background: C.ink, color: onPrimary, border: "none", borderRadius: 10,
+        padding: "12px 16px", cursor: "pointer", fontFamily: bodyFont, fontWeight: 600, fontSize: 14,
+      }}>
+        <Play size={18} /> Start {isSectional ? "sectional" : "full"} mock
       </button>
     </div>
   );
 }
 
-/* =========================================================
-   MAIN EXPORT
-========================================================= */
-export default function PracticeTestSection({ exam, user }) {
+/* ===================== MAIN ===================== */
+export default function PracticeTestSection({ exam, user, colors }) {
+  const C = colors || DEFAULT_C;
+
   const [phase, setPhase] = useState("lobby");
   const [paper, setPaper] = useState(null);
   const [result, setResult] = useState(null);
@@ -1307,12 +725,10 @@ export default function PracticeTestSection({ exam, user }) {
   const [sectionId, setSectionId] = useState(pattern?.sections?.[0]?.id || null);
 
   const start = () => {
-    setPaper(
-      buildPaper(exam.id, selectedYear, {
-        mode,
-        sectionId: mode === "sectional" ? sectionId : null,
-      })
-    );
+    setPaper(buildPaper(exam.id, selectedYear, {
+      mode,
+      sectionId: mode === "sectional" ? sectionId : null,
+    }));
     setResult(null);
     setPhase("live");
   };
@@ -1337,12 +753,11 @@ export default function PracticeTestSection({ exam, user }) {
           mode={mode}
           onModeChange={(m) => {
             setMode(m);
-            if (m === "sectional" && !sectionId) {
-              setSectionId(pattern.sections[0]?.id || null);
-            }
+            if (m === "sectional" && !sectionId) setSectionId(pattern.sections[0]?.id || null);
           }}
           sectionId={sectionId}
           onSectionChange={setSectionId}
+          C={C}
         />
       )}
       {phase === "live" && paper && (
@@ -1356,6 +771,7 @@ export default function PracticeTestSection({ exam, user }) {
           onAbort={() => {
             if (window.confirm("Leave test? Progress will be lost.")) setPhase("lobby");
           }}
+          C={C}
         />
       )}
       {phase === "results" && paper && result && (
@@ -1370,6 +786,7 @@ export default function PracticeTestSection({ exam, user }) {
           mode={paper.mode || mode}
           onRetry={start}
           onClose={() => setPhase("lobby")}
+          C={C}
         />
       )}
     </div>

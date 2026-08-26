@@ -1270,7 +1270,7 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
         </div>
 
         <div style={{ padding: "0 20px 20px" }}>
-          <PracticeTestSection exam={exam} user={user} />
+          <PracticeTestSection exam={exam} user={user} colors={C} />
           <CloudFiles user={user} examId={exam.id} />
         </div>
       </div>
