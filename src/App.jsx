@@ -142,8 +142,7 @@ function ProgressDashboard({ attempts, colors, userId }) {
     }
   };
 
-  // ---------- EMPTY STATE ----------
-  if (!attempts || attempts.length === 0) {
+  if (false) {   // temporary – always show the full UI 
     return (
       <div
         style={{
@@ -168,16 +167,10 @@ function ProgressDashboard({ attempts, colors, userId }) {
     );
   }
 
-  // ---------- SAFE AVERAGE (no NaN) ----------
-  const avgPct = Math.round(
-    attempts.reduce((sum, a) => {
-      const max = Number(a.maxScore) || 0;
-      const sc = Number(a.score) || 0;
-      return sum + (max > 0 ? (sc / max) * 100 : 0);
-    }, 0) / attempts.length
-  );
+  const avgPct =
+    attempts.reduce((a, x) => a + (x.maxScore ? (x.score / x.maxScore) * 100 : 0), 0) /
+    attempts.length;
 
-  // Weak sections frequency
   const weakMap = {};
   attempts.forEach((a) => {
     (a.weakSections || []).forEach((w) => {
@@ -187,9 +180,6 @@ function ProgressDashboard({ attempts, colors, userId }) {
   const topWeak = Object.entries(weakMap)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4);
-
-  const last = attempts[0];
-  const lastScore = `${Number(last?.score) || 0}/${Number(last?.maxScore) || 0}`;
 
   return (
     <div
@@ -201,15 +191,12 @@ function ProgressDashboard({ attempts, colors, userId }) {
         marginBottom: 20,
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           marginBottom: 12,
-          flexWrap: "wrap",
-          gap: 8,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -240,7 +227,6 @@ function ProgressDashboard({ attempts, colors, userId }) {
         </button>
       </div>
 
-      {/* Stats */}
       <div
         style={{
           display: "grid",
@@ -258,18 +244,17 @@ function ProgressDashboard({ attempts, colors, userId }) {
         <div style={{ background: T.softGreen, borderRadius: 10, padding: 10 }}>
           <div style={{ fontFamily: monoFont, fontSize: 10, color: T.inkSoft }}>AVG %</div>
           <div style={{ fontFamily: monoFont, fontSize: 20, fontWeight: 700, color: T.ink }}>
-            {avgPct}%
+            {Math.round(avgPct)}%
           </div>
         </div>
         <div style={{ background: T.softYellow, borderRadius: 10, padding: 10 }}>
           <div style={{ fontFamily: monoFont, fontSize: 10, color: T.inkSoft }}>LAST SCORE</div>
           <div style={{ fontFamily: monoFont, fontSize: 18, fontWeight: 700, color: T.ink }}>
-            {lastScore}
+            {attempts[0].score}/{attempts[0].maxScore}
           </div>
         </div>
       </div>
 
-      {/* Often weak */}
       {topWeak.length > 0 && (
         <div style={{ marginBottom: 12 }}>
           <div
@@ -304,7 +289,6 @@ function ProgressDashboard({ attempts, colors, userId }) {
         </div>
       )}
 
-      {/* Recent attempts */}
       <div
         style={{
           fontFamily: monoFont,
@@ -317,64 +301,58 @@ function ProgressDashboard({ attempts, colors, userId }) {
         Recent attempts
       </div>
       <div style={{ display: "grid", gap: 6 }}>
-        {attempts.slice(0, 8).map((a) => {
-          const max = Number(a.maxScore) || 0;
-          const sc = Number(a.score) || 0;
-          const pct = max > 0 ? Math.round((sc / max) * 100) : 0;
+        {attempts.slice(0, 8).map((a) => (
+          <div
+            key={a.id}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+              padding: "8px 10px",
+              background: T.bg,
+              borderRadius: 8,
+              fontFamily: bodyFont,
+              fontSize: 12.5,
+              color: T.ink,
+            }}
+          >
+            <span>
+              <strong>{a.examName}</strong>
+              <span style={{ color: T.inkSoft }}>
+                {" "}
+                · {a.mode === "sectional" ? "sectional" : "full"}
+              </span>
+            </span>
 
-          return (
-            <div
-              key={a.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 8,
-                flexWrap: "wrap",
-                padding: "8px 10px",
-                background: T.bg,
-                borderRadius: 8,
-                fontFamily: bodyFont,
-                fontSize: 12.5,
-                color: T.ink,
-              }}
-            >
-              <span>
-                <strong>{a.examName || "Mock"}</strong>
-                <span style={{ color: T.inkSoft }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontFamily: monoFont, fontWeight: 600 }}>
+                {a.score}/{a.maxScore}
+                <span style={{ color: T.inkSoft, fontWeight: 400 }}>
                   {" "}
-                  · {a.mode === "sectional" ? "sectional" : "full"}
+                  · {a.at ? new Date(a.at).toLocaleDateString("en-IN") : ""}
                 </span>
               </span>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontFamily: monoFont, fontWeight: 600 }}>
-                  {sc}/{max} ({pct}%)
-                  <span style={{ color: T.inkSoft, fontWeight: 400 }}>
-                    {" "}
-                    · {a.at ? new Date(a.at).toLocaleDateString("en-IN") : ""}
-                  </span>
-                </span>
-
-                <button
-                  onClick={() => handleDeleteOne(a.id)}
-                  title="Delete this attempt"
-                  style={{
-                    border: "none",
-                    background: T.softRed,
-                    color: T.red,
-                    borderRadius: 6,
-                    padding: "5px 7px",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
+              <button
+                onClick={() => handleDeleteOne(a.id)}
+                title="Delete this attempt"
+                style={{
+                  border: "none",
+                  background: T.softRed,
+                  color: T.red,
+                  borderRadius: 6,
+                  padding: "5px 7px",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                }}
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );
