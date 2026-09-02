@@ -1274,11 +1274,12 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
           </section>
         </div>
 
-        <div style={{ padding: "0 20px 20px" }}>
-  <PracticeTestSection exam={exam} user={user} colors={C} />
-  <MentorSession exam={exam} user={user} colors={C} />
-  <CloudFiles user={user} examId={exam.id} />
-</div>
+             <div style={{ padding: "0 20px 20px" }}>
+          <PredictedPaperPanel examId={exam.id} colors={C} user={user} />
+          <PracticeTestSection exam={exam} user={user} colors={C} />
+          <MentorSession exam={exam} user={user} colors={C} />
+          <CloudFiles user={user} examId={exam.id} />
+        </div>
       </div>
     </div>
   );
