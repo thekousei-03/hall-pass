@@ -26,8 +26,8 @@ import { db } from "../firebase";
    Used only if Firestore is empty or offline
 ========================================================= */
 export const FALLBACK_EXAMS = [{
-        id: "upsc-cse",
-        shortName: "UPSC CSE",
+        id: "upsc",
+        shortName: "UPSC ",
         name: "Civil Services Examination",
         category: "UPSC",
         examDate: "2027-05-30",
