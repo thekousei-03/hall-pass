@@ -43,14 +43,14 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { subscribeExams } from "./services/examService";
-import { SEED_EXAMS } from "./data/seedExamsData";
-import { subscribeStarred, toggleStarred } from "./services/starredService";
+import { subscribeExams } from "./examService";
+import { SEED_EXAMS } from "./seedExamsData";
+import { subscribeStarred, toggleStarred } from "./starredService";
 import {
   subscribeAttempts,
   deleteAttempt,
   deleteAllAttempts,
-} from "./services/progressService";
+} from "./progressService";
 
 /* =========================================================
    FONTS & COLORS
