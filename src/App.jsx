@@ -11,7 +11,7 @@ import CloudFiles from "./CloudFiles";
 import PredictedPaperPanel from "./PredictedPaperPanel";
 
 import Pricing from "./Pricing";
-import { Crown } from "lucide-react";
+
 
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "./firebase";
