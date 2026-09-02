@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
+import MentorSession from "./MentorSession";
+import ChatWidget from "./ChatWidget";
+
 import Auth from "./Auth";
 import PracticeTestSection from "./PracticeTest";
 import CloudFiles from "./CloudFiles";
@@ -1270,9 +1273,10 @@ function ExamDetail({ exam, starred, onToggleStar, onBack, user }) {
         </div>
 
         <div style={{ padding: "0 20px 20px" }}>
-          <PracticeTestSection exam={exam} user={user} colors={C} />
-          <CloudFiles user={user} examId={exam.id} />
-        </div>
+  <PracticeTestSection exam={exam} user={user} colors={C} />
+  <MentorSession exam={exam} user={user} colors={C} />
+  <CloudFiles user={user} examId={exam.id} />
+</div>
       </div>
     </div>
   );
@@ -2341,7 +2345,6 @@ export default function App() {
                 ))}
               </div>
             )}
-
             <div
               style={{
                 fontFamily: bodyFont,
@@ -2359,6 +2362,8 @@ export default function App() {
           </>
         )}
       </div>
+
+      {user && <ChatWidget colors={C} />}
     </div>
   );
 }
