@@ -15,8 +15,7 @@ import {
   RotateCcw,
   ListChecks,
 } from "lucide-react";
-import { saveAttempt } from "./services/progressService";
-
+import { saveAttempt } from "./progressService";
 const displayFont = "'Space Grotesk', sans-serif";
 const bodyFont = "'IBM Plex Sans', sans-serif";
 const monoFont = "'IBM Plex Mono', monospace";

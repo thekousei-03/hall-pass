@@ -10,13 +10,10 @@ import {
     doc,
     getDocs,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "./firebase";
 
 const ATTEMPTS_COL = "testAttempts";
 
-/**
- * Live listener – newest first (client-side sort)
- */
 export function subscribeAttempts(userId, onData, onError) {
     if (!userId) {
         onData([]);
@@ -34,12 +31,14 @@ export function subscribeAttempts(userId, onData, onError) {
         (snap) => {
             const list = snap.docs.map((d) => {
                 const data = d.data();
+                let at = data.at;
+                if (at && typeof at.toDate === "function") {
+                    at = at.toDate().toISOString();
+                }
                 return {
                     id: d.id,
                     ...data,
-                    at: data.at ? .toDate ?
-                        data.at.toDate().toISOString() :
-                        data.at || null,
+                    at: at || null,
                 };
             });
 
@@ -58,9 +57,6 @@ export function subscribeAttempts(userId, onData, onError) {
     );
 }
 
-/**
- * Save a completed mock attempt
- */
 export async function saveAttempt(userId, attempt) {
     if (!userId) {
         console.warn("saveAttempt: no userId");
@@ -76,7 +72,8 @@ export async function saveAttempt(userId, attempt) {
             score: Number(attempt.score) || 0,
             maxScore: Number(attempt.maxScore) || 0,
             weakSections: Array.isArray(attempt.weakSections) ?
-                attempt.weakSections : [],
+                attempt.weakSections :
+                [],
             answersSummary: attempt.answersSummary || null,
             timeTakenSec: attempt.timeTakenSec ? ? null,
             yearStyle: attempt.yearStyle || null,
@@ -92,17 +89,11 @@ export async function saveAttempt(userId, attempt) {
     }
 }
 
-/**
- * Delete a single attempt
- */
 export async function deleteAttempt(attemptId) {
     if (!attemptId) return;
     await deleteDoc(doc(db, ATTEMPTS_COL, attemptId));
 }
 
-/**
- * Delete all attempts of a user
- */
 export async function deleteAllAttempts(userId) {
     if (!userId) return;
 
@@ -112,8 +103,7 @@ export async function deleteAllAttempts(userId) {
     );
     const snap = await getDocs(q);
 
-    const promises = snap.docs.map((d) =>
-        deleteDoc(doc(db, ATTEMPTS_COL, d.id))
+    await Promise.all(
+        snap.docs.map((d) => deleteDoc(doc(db, ATTEMPTS_COL, d.id)))
     );
-    await Promise.all(promises);
 }

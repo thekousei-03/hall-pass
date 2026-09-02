@@ -9,17 +9,13 @@ import {
     query,
     orderBy,
 } from "firebase/firestore";
-import { db } from "../firebase";
-import { SEED_EXAMS } from "../data/seedExamsData";
+import { db } from "./firebase";
+import { SEED_EXAMS } from "./seedExamsData";
 
 const EXAMS_COL = "exams";
 
 /**
- * One-time seed. Call this from the browser console once:
- *   import { seedExams } from "./services/examService";
- *   seedExams().then(console.log)
- *
- * Safe to run multiple times — it uses setDoc with merge.
+ * One-time seed. Call from browser console once if needed.
  */
 export async function seedExams() {
     const results = [];
@@ -37,17 +33,13 @@ export async function seedExams() {
     return { seeded: results.length, ids: results };
 }
 
-/**
- * Load all exams once (Promise)
- */
 export async function fetchExams() {
-    const snap = await getDocs(query(collection(db, EXAMS_COL), orderBy("examDate", "asc")));
+    const snap = await getDocs(
+        query(collection(db, EXAMS_COL), orderBy("examDate", "asc"))
+    );
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-/**
- * Live listener — preferred in the app
- */
 export function subscribeExams(onData, onError) {
     const q = query(collection(db, EXAMS_COL), orderBy("examDate", "asc"));
     return onSnapshot(
@@ -63,9 +55,6 @@ export function subscribeExams(onData, onError) {
     );
 }
 
-/**
- * Get a single exam
- */
 export async function fetchExamById(examId) {
     const snap = await getDoc(doc(db, EXAMS_COL, examId));
     if (!snap.exists()) return null;

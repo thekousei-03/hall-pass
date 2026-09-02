@@ -7,8 +7,9 @@ import {
     query,
     where,
     serverTimestamp,
+    getDoc,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "./firebase";
 
 const STARRED_COL = "starred";
 
@@ -41,7 +42,7 @@ export function subscribeStarred(userId, onData, onError) {
 }
 
 /**
- * Star an exam (idempotent — uses examId as document ID for easy delete)
+ * Star an exam (idempotent)
  */
 export async function starExam(userId, examId) {
     if (!userId || !examId) return;
@@ -62,4 +63,24 @@ export async function unstarExam(userId, examId) {
     if (!userId || !examId) return;
     const ref = doc(db, STARRED_COL, `${userId}_${examId}`);
     await deleteDoc(ref);
+}
+
+/**
+ * Toggle star — used by App.jsx
+ */
+export async function toggleStarred(userId, examId) {
+    if (!userId || !examId) return;
+    const ref = doc(db, STARRED_COL, `${userId}_${examId}`);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+        await deleteDoc(ref);
+    } else {
+        await setDoc(
+            ref, {
+                userId,
+                examId,
+                starredAt: serverTimestamp(),
+            }, { merge: true }
+        );
+    }
 }
