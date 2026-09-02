@@ -42,7 +42,7 @@ export default function ChatWidget({ colors, fonts }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [loaded, setLoaded] = useState(true); // no history restore
+  const [loaded, setLoaded] = useState(true);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -131,16 +131,15 @@ export default function ChatWidget({ colors, fonts }) {
             }}
           >
             {loaded && messages.length === 0 && (
-  <div
-    style={{
-      fontFamily: bodyFont,
-      fontSize: 12.5,
-      color: T.inkSoft,
-      textAlign: "center",
-      padding: "16px 6px",
-      lineHeight: 1.5,
-    }}
-  
+              <div
+                style={{
+                  fontFamily: bodyFont,
+                  fontSize: 12.5,
+                  color: T.inkSoft,
+                  textAlign: "center",
+                  padding: "16px 6px",
+                  lineHeight: 1.5,
+                }}
               >
                 Ask me anything about your exam — pattern, syllabus, strategy, or a concept you are stuck on.
                 <div style={{ fontSize: 11, marginTop: 8, fontStyle: "italic" }}>
@@ -148,6 +147,7 @@ export default function ChatWidget({ colors, fonts }) {
                 </div>
               </div>
             )}
+
             {messages.map((m, i) => {
               const isUser = m.role === "user";
               return (
@@ -174,6 +174,7 @@ export default function ChatWidget({ colors, fonts }) {
                 </div>
               );
             })}
+
             {sending && (
               <div
                 style={{
