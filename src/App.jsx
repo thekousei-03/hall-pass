@@ -145,7 +145,8 @@ function ProgressDashboard({ attempts, colors, userId }) {
     }
   };
 
-  if (false) {   // temporary – always show the full UI 
+  // ✅ Empty state — no attempts yet
+  if (!attempts || attempts.length === 0) {
     return (
       <div
         style={{
@@ -174,6 +175,7 @@ function ProgressDashboard({ attempts, colors, userId }) {
     attempts.reduce((a, x) => a + (x.maxScore ? (x.score / x.maxScore) * 100 : 0), 0) /
     attempts.length;
 
+  // ... rest of the component stays the same
   const weakMap = {};
   attempts.forEach((a) => {
     (a.weakSections || []).forEach((w) => {
