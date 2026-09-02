@@ -72,8 +72,7 @@ export async function saveAttempt(userId, attempt) {
             score: Number(attempt.score) || 0,
             maxScore: Number(attempt.maxScore) || 0,
             weakSections: Array.isArray(attempt.weakSections) ?
-                attempt.weakSections :
-                [],
+                attempt.weakSections : [],
             answersSummary: attempt.answersSummary || null,
             timeTakenSec: attempt.timeTakenSec ? ? null,
             yearStyle: attempt.yearStyle || null,
