@@ -74,7 +74,7 @@ export async function saveAttempt(userId, attempt) {
             weakSections: Array.isArray(attempt.weakSections) ?
                 attempt.weakSections : [],
             answersSummary: attempt.answersSummary || null,
-            timeTakenSec: attempt.timeTakenSec ? ? null,
+            timeTakenSec: attempt.timeTakenSec != null ? attempt.timeTakenSec : null,
             yearStyle: attempt.yearStyle || null,
             section: attempt.section || null,
             at: serverTimestamp(),
