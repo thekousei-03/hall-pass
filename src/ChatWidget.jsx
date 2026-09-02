@@ -131,15 +131,16 @@ export default function ChatWidget({ colors, fonts }) {
             }}
           >
             {loaded && messages.length === 0 && (
-              <div
-                style={{
-                  fontFamily: bodyFont,
-                  fontSize: 12.5,
-                  color: T.inkSoft,
-                  textAlign: "center",
-                  padding: "16px 6px",
-                  lineHeight: 1. instyle,
-                }}
+  <div
+    style={{
+      fontFamily: bodyFont,
+      fontSize: 12.5,
+      color: T.inkSoft,
+      textAlign: "center",
+      padding: "16px 6px",
+      lineHeight: 1.5,
+    }}
+  
               >
                 Ask me anything about your exam — pattern, syllabus, strategy, or a concept you are stuck on.
                 <div style={{ fontSize: 11, marginTop: 8, fontStyle: "italic" }}>
