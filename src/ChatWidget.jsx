@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MessageCircle, X, Send, Bot, Loader2 } from "lucide-react";
 
 function mockReply(question) {
@@ -42,19 +42,8 @@ export default function ChatWidget({ colors, fonts }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(true); // no history restore
   const scrollRef = useRef(null);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("hp-chat-history");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setMessages(parsed);
-      }
-    } catch {}
-    setLoaded(true);
-  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -62,23 +51,20 @@ export default function ChatWidget({ colors, fonts }) {
     }
   }, [messages, open, sending]);
 
-  const persist = useCallback((list) => {
-    try {
-      localStorage.setItem("hp-chat-history", JSON.stringify(list));
-    } catch {}
-  }, []);
-
   const send = async () => {
     const text = input.trim();
     if (!text || sending) return;
-    const next = [...messages, { role: "user", content: text }];
+
+    // Fresh conversation each time — older messages disappear
+    const next = [{ role: "user", content: text }];
     setMessages(next);
     setInput("");
     setSending(true);
+
     await new Promise((r) => setTimeout(r, 500 + Math.random() * 500));
+
     const final = [...next, { role: "assistant", content: mockReply(text) }];
     setMessages(final);
-    persist(final);
     setSending(false);
   };
 
@@ -152,7 +138,7 @@ export default function ChatWidget({ colors, fonts }) {
                   color: T.inkSoft,
                   textAlign: "center",
                   padding: "16px 6px",
-                  lineHeight: 1.5,
+                  lineHeight: 1. instyle,
                 }}
               >
                 Ask me anything about your exam — pattern, syllabus, strategy, or a concept you are stuck on.
