@@ -8,6 +8,7 @@ import ChatWidget from "./ChatWidget";
 import Auth from "./Auth";
 import PracticeTestSection from "./PracticeTest";
 import CloudFiles from "./CloudFiles";
+import PredictedPaperPanel from "./PredictedPaperPanel";
 
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "./firebase";
