@@ -10,6 +10,9 @@ import PracticeTestSection from "./PracticeTest";
 import CloudFiles from "./CloudFiles";
 import PredictedPaperPanel from "./PredictedPaperPanel";
 
+import Pricing from "./Pricing";
+import { Crown } from "lucide-react";
+
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "./firebase";
 
@@ -42,6 +45,7 @@ import {
   Sun,
   TrendingUp,
   Trash2,
+  Crown,                // ← add this
 } from "lucide-react";
 
 import { subscribeExams } from "./examService";
@@ -1689,80 +1693,106 @@ export default function App() {
 
         {/* User bar */}
         <div
-          style={{
-            background: C.surface,
-            border: `1px solid ${C.line}`,
-            borderRadius: 10,
-            padding: "9px 12px",
-            marginBottom: 18,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: bodyFont,
-              fontSize: 12.5,
-              color: C.inkSoft,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              flex: 1,
-              minWidth: 120,
-            }}
-          >
-            Signed in as <strong style={{ color: C.ink }}>{user.email}</strong>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                fontFamily: bodyFont,
-                fontSize: 12,
-                fontWeight: 600,
-                color: C.ink,
-                background: C.bg,
-                border: `1px solid ${C.line}`,
-                borderRadius: 7,
-                padding: "6px 11px",
-                cursor: "pointer",
-              }}
-            >
-              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-              {theme === "dark" ? "Light" : "Dark"}
-            </button>
-            <button
-              onClick={async () => {
-                try {
-                  await signOut(auth);
-                } catch (e) {
-                  console.error(e);
-                }
-              }}
-              style={{
-                fontFamily: bodyFont,
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#fff",
-                background: C.red,
-                border: "none",
-                borderRadius: 7,
-                padding: "6px 11px",
-                cursor: "pointer",
-              }}
-            >
-              Logout
-            </button>
-          </div>
-        </div>
+  style={{
+    background: C.surface,
+    border: `1px solid ${C.line}`,
+    borderRadius: 10,
+    padding: "9px 12px",
+    marginBottom: 18,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    flexWrap: "wrap",
+  }}
+>
+  <div
+    style={{
+      fontFamily: bodyFont,
+      fontSize: 12.5,
+      color: C.inkSoft,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      flex: 1,
+      minWidth: 120,
+    }}
+  >
+    Signed in as <strong style={{ color: C.ink }}>{user.email}</strong>
+  </div>
+
+  <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+    {/* Pricing Button */}
+    <button
+      type="button"
+      onClick={() => setView("pricing")}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        fontFamily: bodyFont,
+        fontSize: 12,
+        fontWeight: 600,
+        color: C.ink,
+        background: C.softYellow,
+        border: "none",
+        borderRadius: 7,
+        padding: "6px 11px",
+        cursor: "pointer",
+      }}
+    >
+      <Crown size={14} /> Pricing
+    </button>
+
+    {/* Theme Toggle */}
+    <button
+      type="button"
+      onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        fontFamily: bodyFont,
+        fontSize: 12,
+        fontWeight: 600,
+        color: C.ink,
+        background: C.bg,
+        border: `1px solid ${C.line}`,
+        borderRadius: 7,
+        padding: "6px 11px",
+        cursor: "pointer",
+      }}
+    >
+      {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+      {theme === "dark" ? "Light" : "Dark"}
+    </button>
+
+    {/* Logout */}
+    <button
+      onClick={async () => {
+        try {
+          await signOut(auth);
+        } catch (e) {
+          console.error(e);
+        }
+      }}
+      style={{
+        fontFamily: bodyFont,
+        fontSize: 12,
+        fontWeight: 600,
+        color: "#fff",
+        background: C.red,
+        border: "none",
+        borderRadius: 7,
+        padding: "6px 11px",
+        cursor: "pointer",
+      }}
+    >
+      Logout
+    </button>
+  </div>
+</div>
 
         {examsError && (
           <div
